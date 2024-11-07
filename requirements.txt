@@ -9,7 +9,8 @@ scikit-learn
 imblearn
 xgboost
 catboost
-pymongo
+mysql-connector-python
+SQLAlchemy
 from_root
 evidently==0.2.8
 dill
