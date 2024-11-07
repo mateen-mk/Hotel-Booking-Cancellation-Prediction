@@ -163,3 +163,4 @@ cython_debug/
 
 
 .hotelenv/*
+hotel_booking_cancellation.egg-info/*
