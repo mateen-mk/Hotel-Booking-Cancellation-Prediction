@@ -1,11 +1,13 @@
 numpy
 pandas
 matplotlib
-ipykernel
 plotly
 seaborn
+sort_dataframeby_monthorweek
+sorted_months_weekdays
 folium
 scipy
+ipykernel
 scikit-learn
 imblearn
 xgboost
