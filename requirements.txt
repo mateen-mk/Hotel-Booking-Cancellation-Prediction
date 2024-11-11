@@ -5,6 +5,7 @@ plotly
 seaborn
 sort_dataframeby_monthorweek
 sorted_months_weekdays
+missingno
 folium
 scipy
 ipykernel
