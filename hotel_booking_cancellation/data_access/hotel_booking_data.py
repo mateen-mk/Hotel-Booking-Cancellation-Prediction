@@ -7,7 +7,7 @@ from hotel_booking_cancellation.exception import HotelBookingException
 from hotel_booking_cancellation.constants import DATABASE_NAME
 
 
-class USvisaData:
+class HotelBookingData:
     """
     This class helps to export entire MySQL table data as a pandas DataFrame.
     """
@@ -21,11 +21,11 @@ class USvisaData:
         except Exception as e:
             raise HotelBookingException(e, sys)
 
-    def export_table_as_dataframe(self, table_name: str, database_name: Optional[str] = None) -> pd.DataFrame:
+    def export_data_as_dataframe(self, dataset_name: str, database_name: Optional[str] = None) -> pd.DataFrame:
         """
         Exports the entire table as a pandas DataFrame.
         
-        :param table_name: Name of the table to export.
+        :param dataset_name: Name of the dataset to export.
         :param database_name: Name of the database (optional, defaults to the connection's database).
         :return: pd.DataFrame containing table data.
         """
@@ -34,7 +34,7 @@ class USvisaData:
             database_name = database_name or DATABASE_NAME
             
             # Construct the SQL query
-            query = f"SELECT * FROM {database_name}.{table_name}"
+            query = f"SELECT * FROM {database_name}.{dataset_name}"
             
             # Fetch data using SQLAlchemy
             with self.mysql_connect.engine.connect() as connection:

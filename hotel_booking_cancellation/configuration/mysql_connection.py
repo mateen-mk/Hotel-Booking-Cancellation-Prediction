@@ -23,7 +23,7 @@ class MySQLConnect:
             sqlalchemy_url = os.getenv(MYSQL_ENGINE_URL)
             
             if not sqlalchemy_url:
-                raise Exception("Environment variable 'SQLALCHEMY_ENGINE_URL' is not set.")
+                raise Exception("Environment variable 'MYSQL_ENGINE_URL' is not set.")
             
             if MySQLConnect.engine is None:
                 # Initialize the SQLAlchemy engine
