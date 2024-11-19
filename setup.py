@@ -17,7 +17,7 @@ setuptools.setup(
     version=__version__,
     author=AUTHOR_USER_NAME,
     author_email=AUTHOR_EMAIL,
-    description="We can predict hotel booking cancellations using this package.",
+    description="A python package for predicting Hotel Booking Cancellations.",
     long_description=long_description,
     long_description_content="text/markdown",
     url=f"https://github.com/{AUTHOR_USER_NAME}/{REPO_NAME}",
