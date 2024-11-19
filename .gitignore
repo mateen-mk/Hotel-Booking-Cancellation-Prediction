@@ -163,7 +163,4 @@ cython_debug/
 
 
 .hotelenv/*
-hotel_booking_cancellation.egg-info/*
-.ipynb_checkpoints/*
-notebook/.ipynb_checkpoints/*
 artifact/*

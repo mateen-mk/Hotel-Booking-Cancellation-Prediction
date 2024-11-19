@@ -4,12 +4,12 @@ import sys
 from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 
-from hotel_booking_cancellation.constants import DATASET_NAME
-from hotel_booking_cancellation.entity.config_entity import DataIngestionConfig
-from hotel_booking_cancellation.entity.artifact_entity import DataIngestionArtifact
-from hotel_booking_cancellation.exception import HotelBookingException
-from hotel_booking_cancellation.logger import logging
-from hotel_booking_cancellation.data_access.hotel_booking_data import HotelBookingData
+from src.hotel_booking_cancellation.constants import DATASET_NAME
+from src.hotel_booking_cancellation.entity.config_entity import DataIngestionConfig
+from src.hotel_booking_cancellation.entity.artifact_entity import DataIngestionArtifact
+from src.hotel_booking_cancellation.exception import HotelBookingException
+from src.hotel_booking_cancellation.logger import logging
+from src.hotel_booking_cancellation.data_access.hotel_booking_data import HotelBookingData
 
 
 

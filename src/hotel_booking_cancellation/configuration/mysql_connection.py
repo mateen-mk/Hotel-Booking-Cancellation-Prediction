@@ -1,7 +1,7 @@
 import sys
-from hotel_booking_cancellation.exception import HotelBookingException
-from hotel_booking_cancellation.logger import logging
-from hotel_booking_cancellation.constants import MYSQL_ENGINE_URL
+from src.hotel_booking_cancellation.exception import HotelBookingException
+from src.hotel_booking_cancellation.logger import logging
+from src.hotel_booking_cancellation.constants import MYSQL_ENGINE_URL
 
 import os
 from sqlalchemy import create_engine

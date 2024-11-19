@@ -1,10 +1,10 @@
 import sys
-from hotel_booking_cancellation.exception import HotelBookingException
-from hotel_booking_cancellation.logger import logging
-from hotel_booking_cancellation.components.data_ingestion import DataIngestion
+from src.hotel_booking_cancellation.exception import HotelBookingException
+from src.hotel_booking_cancellation.logger import logging
+from src.hotel_booking_cancellation.components.data_ingestion import DataIngestion
 
-from hotel_booking_cancellation.entity.config_entity import DataIngestionConfig
-from hotel_booking_cancellation.entity.artifact_entity import DataIngestionArtifact
+from src.hotel_booking_cancellation.entity.config_entity import DataIngestionConfig
+from src.hotel_booking_cancellation.entity.artifact_entity import DataIngestionArtifact
 
 
 

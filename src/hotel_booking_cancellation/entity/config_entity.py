@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from hotel_booking_cancellation.constants import *
+from src.hotel_booking_cancellation.constants import *
 
 
 

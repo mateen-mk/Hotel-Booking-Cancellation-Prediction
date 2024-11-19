@@ -2,9 +2,9 @@ import sys
 import pandas as pd
 from typing import Optional
 
-from hotel_booking_cancellation.configuration.mysql_connection import MySQLConnect
-from hotel_booking_cancellation.exception import HotelBookingException
-from hotel_booking_cancellation.constants import DATABASE_NAME
+from src.hotel_booking_cancellation.configuration.mysql_connection import MySQLConnect
+from src.hotel_booking_cancellation.exception import HotelBookingException
+from src.hotel_booking_cancellation.constants import DATABASE_NAME
 
 
 class HotelBookingData:
