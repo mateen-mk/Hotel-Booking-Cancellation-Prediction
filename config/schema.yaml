@@ -1,0 +1,119 @@
+# Dataset Columns
+columns:
+  - hotel: category
+  - is_canceled: int
+  - lead_time: int
+  - arrival_date_year: int
+  - arrival_date_month: category
+  - arrival_date_week_number: int
+  - arrival_date_day_of_month: int
+  - stays_in_weekend_nights: int
+  - stays_in_week_nights: int
+  - adults: int
+  - children: float
+  - babies: int
+  - meal: category
+  - country: category
+  - market_segment: category
+  - distribution_channel: category
+  - is_repeated_guest: int
+  - previous_cancellations: int
+  - previous_bookings_not_canceled: int
+  - reserved_room_type: category
+  - assigned_room_type: category
+  - booking_changes: int
+  - deposit_type: category
+  - agent: float
+  - company: float
+  - days_in_waiting_list: int
+  - customer_type: category
+  - adr: float
+  - required_car_parking_spaces: int
+  - total_of_special_requests: int
+  - reservation_status: category
+  - reservation_status_date: datetime
+  - name: category
+  - email: category
+  - phone-number: category
+  - credit_card: category
+
+numerical_columns:
+  - lead_time
+  - arrival_date_week_number
+  - arrival_date_day_of_month
+  - stays_in_weekend_nights
+  - stays_in_week_nights
+  - adults
+  - children
+  - babies
+  - previous_cancellations
+  - previous_bookings_not_canceled
+  - booking_changes
+  - days_in_waiting_list
+  - adr
+  - required_car_parking_spaces
+  - total_of_special_requests
+
+categorical_columns:
+  - hotel
+  - arrival_date_month
+  - meal
+  - country
+  - market_segment
+  - distribution_channel
+  - reserved_room_type
+  - assigned_room_type
+  - deposit_type
+  - customer_type
+  - reservation_status
+  - name
+  - email
+  - phone-number
+  - credit_card
+
+
+# Irrelevant Columns / Problemitic Columns to Drop to prevent data leakage
+drop_columns:
+  - reservation_status
+  - reservation_status_date
+  - assigned_room_type
+  - arrival_date_year
+  - country
+  - agent
+  - company
+  - name
+  - email
+  - phone-number
+  - credit_card
+
+
+# Data Cleaning
+missing_values_columns:
+  - children
+
+noisy_values_columns:
+  - adr
+  - adults
+  - children
+  - babies
+
+
+# Data Transformation
+ordinal_encoding_columns:
+  - arrival_date_month
+
+onehot_encoding_columns:
+  - hotel
+  - meal
+  - market_segment
+  - distribution_channel
+  - reserved_room_type
+  - deposit_type
+  - customer_type
+
+normalizing_columns:
+  - lead_time
+  - arrival_date_week_number
+  - arrival_date_day_of_month
+  - days_in_waiting_list
+  - adr
