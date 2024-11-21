@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, date
 from dataclasses import dataclass
 
 
@@ -20,10 +20,24 @@ TEST_FILE_NAME: str = "test.csv"
 FILE_NAME: str = "hotel_booking.csv"
 MODEL_FILE_NAME = "model.pkl"
 
+TARGET_COLUMN = "is_canceled"
+CURRENT_YEAR = date.today().year
+PREPROCSSING_OBJECT_FILE_NAME = "preprocessing.pkl"
+SCHEMA_FILE_PATH = os.path.join("config", "schema.yaml")
 
-# Data Ingestion Configuration
+
+
+# Data Ingestion related Constants
 DATASET_NAME = "hotel_booking"
 DATA_INGESTION_DIR_NAME: str = "data_ingestion"
 DATA_INGESTION_DATA_DIR: str = "data"
 DATA_INGESTION_INGESTED_DIR: str = "ingested"
 DATA_INGESTION_TRAIN_TEST_SPLIT_RATIO: float = 0.2
+
+
+# Data Validation related constants
+DATA_VALIDATION_DIR_NAME: str = "data_validation"
+DATA_VALIDATION_DRIFT_REPORT_DIR: str = "drift_report"
+DATA_VALIDATION_DRIFT_REPORT_FILE_NAME: str = "report.yaml"
+
+

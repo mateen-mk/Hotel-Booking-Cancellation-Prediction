@@ -1,16 +1,16 @@
 import os
 import sys
-
 from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 
 from src.hotel_booking_cancellation.constants import DATASET_NAME
+from src.hotel_booking_cancellation.constants import SCHEMA_FILE_PATH
+from src.hotel_booking_cancellation.utils.main_utils import read_yaml_file
 from src.hotel_booking_cancellation.entity.config_entity import DataIngestionConfig
 from src.hotel_booking_cancellation.entity.artifact_entity import DataIngestionArtifact
 from src.hotel_booking_cancellation.exception import HotelBookingException
 from src.hotel_booking_cancellation.logger import logging
 from src.hotel_booking_cancellation.data_access.hotel_booking_data import HotelBookingData
-
 
 
 class DataIngestion:
@@ -21,38 +21,34 @@ class DataIngestion:
         :param data_ingestion_config: Configuration for data ingestion. If not provided, default configuration is used.
 
         Raises:
-            USvisaException: If an error occurs during initialization. The exception message and the original error are provided.
+            HotelBookingException: If an error occurs during initialization. The exception message and the original error are provided.
         """
         try:
             self.dataset_name = DATASET_NAME
             self.data_ingestion_config = data_ingestion_config
+            # Read the schema configuration for sensitive columns and other details
+            self._schema_config = read_yaml_file(file_path=SCHEMA_FILE_PATH)
         except Exception as e:
-            raise HotelBookingException(e, sys)
+            raise HotelBookingException(f"Error during DataIngestion initialization: {str(e)}", sys) from e
 
-
-    def export_data_into_feature_store(self)-> DataFrame:
-        """
-        Method Name :   export_data_into_feature_store
-        Description :   This method exports data from MySQL Database to csv file
-        
-        Output      :   Data is returned as a pandas DataFrame and saved to a CSV file.
-        On Failure  :   Write an exception log and then raise an exception
-        """
+    def export_data_into_feature_store(self) -> DataFrame:
         try:
-            logging.info(f"Exporting data from MySQL Database")
+            logging.info("Exporting data from MySQL Database")
             hotel_booking_data = HotelBookingData()
-            dataframe = hotel_booking_data.export_data_as_dataframe(dataset_name=
-                                                                   self.dataset_name)
+            dataframe = hotel_booking_data.export_data_as_dataframe(dataset_name=self.dataset_name)
             logging.info(f"Shape of dataframe: {dataframe.shape}")
-            feature_store_file_path  = self.data_ingestion_config.data_file_path
-            dir_path = os.path.dirname(feature_store_file_path)
-            os.makedirs(dir_path,exist_ok=True)
-            logging.info(f"Saving exported data into feature store file path: {feature_store_file_path}")
-            dataframe.to_csv(feature_store_file_path,index=False,header=True)
-            return dataframe
 
+            feature_store_file_path = self.data_ingestion_config.data_file_path
+            dir_path = os.path.dirname(feature_store_file_path)
+            os.makedirs(dir_path, exist_ok=True)
+
+            logging.info(f"Saving exported data into feature store file path: {feature_store_file_path}")
+            dataframe.to_csv(feature_store_file_path, index=False, header=True)
+            return dataframe
         except Exception as e:
-            raise HotelBookingException(e,sys)
+            raise HotelBookingException(f"Error in export_data_into_feature_store: {str(e)}", sys) from e
+
+
 
 
     def split_data_as_train_test(self,dataframe: DataFrame) ->None:
@@ -66,6 +62,12 @@ class DataIngestion:
         logging.info("Entered split_data_as_train_test method of Data_Ingestion class")
 
         try:
+            # Retrieve sensitive columns from schema config
+            sensitive_columns = self._schema_config.get("sensitive_columns", [])
+            if sensitive_columns:
+                logging.info(f"Removing sensitive columns: {sensitive_columns}")
+                dataframe = dataframe.drop(columns=sensitive_columns, errors="ignore")
+                
             train_set, test_set = train_test_split(dataframe, test_size=self.data_ingestion_config.train_test_split_ratio)
             logging.info("Performed train test split on the dataframe")
             logging.info("Exited split_data_as_train_test method of Data_Ingestion class")

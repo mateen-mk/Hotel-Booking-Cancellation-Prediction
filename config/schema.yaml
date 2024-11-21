@@ -66,13 +66,16 @@ categorical_columns:
   - deposit_type
   - customer_type
   - reservation_status
+
+
+# Sensitive Columns to remove at the time of data ingestion
+sensitive_columns:
   - name
   - email
   - phone-number
   - credit_card
 
-
-# Irrelevant Columns / Problemitic Columns to Drop to prevent data leakage
+# Problemitic Columns to Drop to prevent data leakage
 drop_columns:
   - reservation_status
   - reservation_status_date
@@ -81,10 +84,6 @@ drop_columns:
   - country
   - agent
   - company
-  - name
-  - email
-  - phone-number
-  - credit_card
 
 
 # Data Cleaning
