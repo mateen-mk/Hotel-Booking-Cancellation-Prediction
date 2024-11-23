@@ -22,7 +22,7 @@ MODEL_FILE_NAME = "model.pkl"
 
 TARGET_COLUMN = "is_canceled"
 CURRENT_YEAR = date.today().year
-PREPROCSSING_OBJECT_FILE_NAME = "preprocessing.pkl"
+PREPROCESSING_OBJECT_FILE_NAME = "preprocessing.pkl"
 SCHEMA_FILE_PATH = os.path.join("config", "schema.yaml")
 
 
@@ -41,3 +41,7 @@ DATA_VALIDATION_DRIFT_REPORT_DIR: str = "drift_report"
 DATA_VALIDATION_DRIFT_REPORT_FILE_NAME: str = "report.yaml"
 
 
+# Data Preprocessing related constants
+DATA_PREPROCESSING_DIR_NAME: str = "data_preprocessing"
+DATA_PREPROCESSING_PREPROCESSED_DATA_DIR: str = "preprocessed"
+DATA_PREPROCESSING_PREPROCESSED_OBJECT_DIR: str = "preprocessed_object"

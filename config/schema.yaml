@@ -110,7 +110,7 @@ onehot_encoding_columns:
   - deposit_type
   - customer_type
 
-normalizing_columns:
+scaling_columns:
   - lead_time
   - arrival_date_week_number
   - arrival_date_day_of_month

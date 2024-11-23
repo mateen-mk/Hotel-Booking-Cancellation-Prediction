@@ -22,6 +22,10 @@ class DataValidation:
         :param data_validation_config: configuration for data validation
         """
         try:
+            logging.info("- "*50)
+            logging.info("- - - - - Started Data Validation Stage - - - - -")
+            logging.info("- "*50)
+
             self.data_ingestion_artifact = data_ingestion_artifact
             self.data_validation_config = data_validation_config
             self._schema_config =read_yaml_file(file_path=SCHEMA_FILE_PATH)

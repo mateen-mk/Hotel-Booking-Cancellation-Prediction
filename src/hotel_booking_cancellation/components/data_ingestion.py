@@ -24,6 +24,10 @@ class DataIngestion:
             HotelBookingException: If an error occurs during initialization. The exception message and the original error are provided.
         """
         try:
+            logging.info("- "*50)
+            logging.info("- - - - - Started Data Ingestion Stage - - - - -")
+            logging.info("- "*50)
+
             self.dataset_name = DATASET_NAME
             self.data_ingestion_config = data_ingestion_config
             # Read the schema configuration for sensitive columns and other details
