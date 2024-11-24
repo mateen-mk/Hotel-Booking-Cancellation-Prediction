@@ -3,17 +3,21 @@ from src.hotel_booking_cancellation.exception import HotelBookingException
 from src.hotel_booking_cancellation.logger import logging
 from src.hotel_booking_cancellation.components.data_ingestion import DataIngestion
 from src.hotel_booking_cancellation.components.data_validation import DataValidation
+from src.hotel_booking_cancellation.components.data_preprocessing import DataPreprocessing
 
 from src.hotel_booking_cancellation.entity.config_entity import (DataIngestionConfig,
-                                                                 DataValidationConfig)
+                                                                 DataValidationConfig,
+                                                                 DataPreprocessingConfig)
 
 from src.hotel_booking_cancellation.entity.artifact_entity import (DataIngestionArtifact, 
-                                                                   DataValidationArtifact)
+                                                                   DataValidationArtifact,
+                                                                   DataPreprocessingArtifact)
 
 class TrainingPipeline:
     def __init__(self):
         self.data_ingestion_config = DataIngestionConfig()
         self.data_validation_config = DataValidationConfig()
+        self.data_preprocessing_config = DataPreprocessingConfig()
 
 
     # Data Ingestion Function
@@ -61,6 +65,23 @@ class TrainingPipeline:
             raise HotelBookingException(e, sys) from e
 
 
+    # Data Preprocessing Function
+    def start_data_preprocessing(self, data_ingestion_artifact: DataIngestionArtifact, data_validation_artifact: DataValidationArtifact) -> DataPreprocessingArtifact:
+        """
+        This method of TrainingPipeline class is responsible for starting data preprocessing component
+        """
+        logging.info("Entered the start_data_preprocessing method of TrainingPipeline class")
+        
+        try:
+            data_preprocessing = DataPreprocessing(data_ingestion_artifact=data_ingestion_artifact,
+                                                   data_validation_artifact=data_validation_artifact,
+                                                   data_preprocessing_config=self.data_preprocessing_config)
+            data_preprocessing_artifact = data_preprocessing.initiate_data_preprocessing()
+            return data_preprocessing_artifact
+        except Exception as e:
+            raise HotelBookingException(e, sys) from e
+        
+
 
     # Run the training pipeline
     def run_pipeline(self, ) -> None:
@@ -70,5 +91,6 @@ class TrainingPipeline:
         try:
             data_ingestion_artifact = self.start_data_ingestion()
             data_validation_artifact = self.start_data_validation(data_ingestion_artifact)
+            data_preprocessing_artifact = self.start_data_preprocessing(data_ingestion_artifact, data_validation_artifact)
         except Exception as e:
             raise HotelBookingException(e, sys) from e

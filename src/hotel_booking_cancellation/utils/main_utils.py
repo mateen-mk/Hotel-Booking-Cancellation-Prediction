@@ -141,23 +141,3 @@ def save_object(file_path: str, obj: object) -> None:
 
     except Exception as e:
         raise HotelBookingException(e, sys) from e
-
-
-
-def drop_columns(df: DataFrame, cols: list)-> DataFrame:
-
-    """
-    drop the columns form a pandas DataFrame
-    df: pandas DataFrame
-    cols: list of columns to be dropped
-    """
-    logging.info("Entered drop_columns methon of utils")
-
-    try:
-        df = df.drop(columns=cols, axis=1)
-
-        logging.info("Exited the drop_columns method of utils")
-        
-        return df
-    except Exception as e:
-        raise HotelBookingException(e, sys) from e

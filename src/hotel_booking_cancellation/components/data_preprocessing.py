@@ -12,14 +12,14 @@ from src.hotel_booking_cancellation.entity.config_entity import DataPreprocessin
 from src.hotel_booking_cancellation.entity.artifact_entity import DataPreprocessingArtifact, DataIngestionArtifact, DataValidationArtifact
 from src.hotel_booking_cancellation.exception import HotelBookingException
 from src.hotel_booking_cancellation.logger import logging
-from src.hotel_booking_cancellation.utils.main_utils import save_object, save_numpy_array_data, read_yaml_file, drop_columns
+from src.hotel_booking_cancellation.utils.main_utils import save_object, save_numpy_array_data, read_yaml_file
 
 
 
 
 class DataPreprocessing:
     def __init__(self, data_ingestion_artifact: DataIngestionArtifact,
-                 data_preprocessing_config: DataPreprocessingArtifact,
+                 data_preprocessing_config: DataPreprocessingConfig,
                  data_validation_artifact: DataValidationArtifact):
         """
         :param data_ingestion_artifact: Output reference of data ingestion artifact stage
@@ -196,7 +196,7 @@ class DataPreprocessing:
 
             logging.info("Created preprocessor object from ColumnTransformer")
 
-            logging.info("Exited get_data_preprocessor_object method of DataTransformation class")
+            logging.info("Exited get_data_preprocessor_object method of DataPreprocessor class")
             return preprocessor
 
         except Exception as e:
@@ -204,6 +204,29 @@ class DataPreprocessing:
 
 
 
+    # Funcion for Separating Target feature from Dataset
+    def separate_features_and_target(self, df: pd.DataFrame, target_column: str) -> tuple:
+        """
+        Method Name :   separate_features_and_target
+        Description :   Separates independent features and dependent (target) feature from the DataFrame.
+        
+        Input       :   df            -> The input DataFrame (train/test).
+                    target_column  -> The name of the target column in the DataFrame.
+        
+        Output      :   tuple         -> A tuple containing the independent features DataFrame and the target feature series.
+        """
+        try:
+            logging.info(f"Separating independent features and target feature for column: {target_column}")
+            
+            # Separating independent features (X) and target feature (y)
+            input_features_df = df.drop(columns=[target_column], axis=1)
+            target_feature_df = df[target_column]
+            
+            logging.info("Independent features and target feature separated successfully")
+            return input_features_df, target_feature_df
+
+        except Exception as e:
+            raise HotelBookingException(f"Error in separate_features_and_target: {str(e)}", sys) from e
 
 
 
@@ -223,6 +246,7 @@ class DataPreprocessing:
                 preprocessor = self.get_data_preprocessing_object()
                 logging.info("Got the preprocessor object")
 
+
                 # Fetching Train and Test datasets
                 logging.info("Start Fetching Train dataset")
                 train_df = DataPreprocessing.read_data(file_path=self.data_ingestion_artifact.trained_file_path)
@@ -233,119 +257,79 @@ class DataPreprocessing:
 
 
                 # Drop directly related features
-                logging.info("Dropping directly related features from Train dataset")
+                logging.info("Start Dropping directly related features from Train dataset")
                 train_df = self.drop_directly_related_features(train_df)
 
-                logging.info("Dropping directly related features from Test dataset")
+                logging.info("Start Dropping directly related features from Test dataset")
                 test_df = self.drop_directly_related_features(test_df)
                 logging.info("Dropped directly related features from Train and Test datasets")
 
 
                 # Handle missing values in Train and Test datasets
-                logging.info("Handling missing values in Training dataset")
+                logging.info("Start Handling missing values in Training dataset")
                 train_df = self.handle_missing_values(train_df)
                 
-                logging.info("Handling missing values in Testing dataset")
+                logging.info("Start Handling missing values in Testing dataset")
                 test_df = self.handle_missing_values(test_df)
                 logging.info("Handled Missing values in Train and Test datasets")
 
 
                 # Handle noisy data in Train and Test datasets
-                logging.info("Handling noisy data in Train and dataset")
+                logging.info("Start Handling noisy data in Train and dataset")
                 train_df = self.handle_noisy_data(train_df)
 
-                logging.info("Handling noisy data in Test and dataset")
+                logging.info("Start Handling noisy data in Test and dataset")
                 test_df = self.handle_noisy_data(test_df)
                 logging.info("Handled Noisy data in Train and Test datasets")
                 
 
                 # Seprating Independent Features and Dependent Feature 
-                logging.info("Start Seprating Independent Features and Dependent Feature for Train data")
-                input_feature_train_df = train_df.drop(columns=[TARGET_COLUMN], axis=1)
-                target_feature_train_df = train_df[TARGET_COLUMN]
-                logging.info("Independent Features and Dependent Feature are separated")
+                logging.info("Start Seprating Independent Features and Dependent Feature for Train dataset")
+                input_feature_train_df, target_feature_train_df = self.separate_features_and_target(train_df, target_column=TARGET_COLUMN)
+
+                logging.info("Start Seprating Independent Features and Dependent Feature for Test dataset")
+                input_feature_test_df, target_feature_test_df = self.separate_features_and_target(test_df, target_column=TARGET_COLUMN)
+                logging.info("Independent Features and Dependent Feature are separated from Train and Test datasets")
 
 
 
-                input_feature_test_df = test_df.drop(columns=[TARGET_COLUMN], axis=1)
+                # Appliying Preprocessing object on Training and Testing Datasets
+                logging.info("Start Appliying Preprocessing object on Train dataset")
+                preprocessed_input_train_arr = preprocessor.fit_transform(input_feature_train_df)
 
-                target_feature_test_df = test_df[TARGET_COLUMN]
+                logging.info("Start Appliying Preprocessing object on Test dataset")
+                preprocessed_input_test_arr = preprocessor.transform(input_feature_test_df)
+                logging.info("Applied Preprocessing object on Train and Test datasets")
 
 
-                input_feature_test_df['company_age'] = CURRENT_YEAR-input_feature_test_df['yr_of_estab']
+                # Combining train and test arrays with target feature (train_arr, test_arr)
+                logging.info("Start Combining train features and target feature as train array")
+                train_arr = np.c_[preprocessed_input_train_arr, np.array(target_feature_train_df)]
 
-                logging.info("Added company_age column to the Test dataset")
+                logging.info("Start Combining test features and target feature as test array")
+                test_arr = np.c_[preprocessed_input_test_arr, np.array(target_feature_test_df)]
+                logging.info("Train and test arrays created successfully")
 
-                input_feature_test_df = drop_columns(df=input_feature_test_df, cols = drop_cols)
 
-                logging.info("drop the columns in drop_cols of Test dataset")
-
-                target_feature_test_df = target_feature_test_df.replace(
-                TargetValueMapping()._asdict()
-                )
-
-                logging.info("Got train features and test features of Testing dataset")
-
-                logging.info(
-                    "Applying preprocessing object on training dataframe and testing dataframe"
-                )
-
-                input_feature_train_arr = preprocessor.fit_transform(input_feature_train_df)
-
-                logging.info(
-                    "Used the preprocessor object to fit transform the train features"
-                )
-
-                input_feature_test_arr = preprocessor.transform(input_feature_test_df)
-
-                logging.info("Used the preprocessor object to transform the test features")
-
-                logging.info("Applying SMOTEENN on Training dataset")
-
-                smt = SMOTEENN(sampling_strategy="minority")
-
-                input_feature_train_final, target_feature_train_final = smt.fit_resample(
-                    input_feature_train_arr, target_feature_train_df
-                )
-
-                logging.info("Applied SMOTEENN on training dataset")
-
-                logging.info("Applying SMOTEENN on testing dataset")
-
-                input_feature_test_final, target_feature_test_final = smt.fit_resample(
-                    input_feature_test_arr, target_feature_test_df
-                )
-
-                logging.info("Applied SMOTEENN on testing dataset")
-
-                logging.info("Created train array and test array")
-
-                train_arr = np.c_[
-                    input_feature_train_final, np.array(target_feature_train_final)
-                ]
-
-                test_arr = np.c_[
-                    input_feature_test_final, np.array(target_feature_test_final)
-                ]
-
-                save_object(self.data_transformation_config.transformed_object_file_path, preprocessor)
-                save_numpy_array_data(self.data_transformation_config.transformed_train_file_path, array=train_arr)
-                save_numpy_array_data(self.data_transformation_config.transformed_test_file_path, array=test_arr)
-
-                logging.info("Saved the preprocessor object")
+                # Saving preprocessor and train, test arrays
+                logging.info("Start Saving preprocessor object and train, test arrays")
+                save_object(self.data_preprocessing_config.preprocessed_object_file_path, preprocessor)
+                save_numpy_array_data(self.data_preprocessing_config.preprocessed_train_file_path, array=train_arr)
+                save_numpy_array_data(self.data_preprocessing_config.preprocessed_test_file_path, array=test_arr)
+                logging.info("Saved the preprocessor object and train, test arrays")
 
                 logging.info(
-                    "Exited initiate_data_transformation method of Data_Transformation class"
+                    "Exited initiate_data_preprocessor method of DataPreprocessor class"
                 )
 
-                data_transformation_artifact = DataTransformationArtifact(
-                    transformed_object_file_path=self.data_transformation_config.transformed_object_file_path,
-                    transformed_train_file_path=self.data_transformation_config.transformed_train_file_path,
-                    transformed_test_file_path=self.data_transformation_config.transformed_test_file_path
+                data_preprocessor_artifact = DataPreprocessingArtifact(
+                    preprocessed_object_file_path=self.data_preprocessing_config.preprocessed_object_file_path,
+                    preprocessed_train_file_path=self.data_preprocessing_config.preprocessed_train_file_path,
+                    preprocessed_test_file_path=self.data_preprocessing_config.preprocessed_test_file_path
                 )
-                return data_transformation_artifact
+                return data_preprocessor_artifact
             else:
                 raise Exception(self.data_validation_artifact.message)
 
         except Exception as e:
-            raise USvisaException(e, sys) from e
+            raise HotelBookingException(e, sys) from e
