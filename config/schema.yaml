@@ -98,7 +98,7 @@ noisy_values_columns:
 
 
 # Data Transformation
-ordinal_encoding_columns:
+label_encoding_columns:
   - arrival_date_month
 
 onehot_encoding_columns:

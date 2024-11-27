@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import dill
 import yaml
-from pandas import DataFrame
+import pandas as pd
 
 from src.hotel_booking_cancellation.exception import HotelBookingException
 from src.hotel_booking_cancellation.logger import logging
@@ -141,3 +141,36 @@ def save_object(file_path: str, obj: object) -> None:
 
     except Exception as e:
         raise HotelBookingException(e, sys) from e
+
+
+
+def read_data(file_path) -> pd.DataFrame:
+    try:
+        return pd.read_csv(file_path)
+    except Exception as e:
+        raise HotelBookingException(e, sys)
+    
+
+# Funcion for Separating Target feature from Dataset
+def separate_features_and_target(df: pd.DataFrame, target_column: str) -> tuple:
+    """
+    Method Name :   separate_features_and_target
+    Description :   Separates independent features and dependent (target) feature from the DataFrame.
+    
+    Input       :   df            -> The input DataFrame (train/test).
+                target_column  -> The name of the target column in the DataFrame.
+    
+    Output      :   tuple         -> A tuple containing the independent features DataFrame and the target feature series.
+    """
+    try:
+        logging.info(f"Separating independent features and target feature for column: {target_column}")
+        
+        # Separating independent features (X) and target feature (y)
+        input_features_df = df.drop(columns=[target_column], axis=1)
+        target_feature_df = df[target_column]
+        
+        logging.info("Independent features and target feature separated successfully")
+        return input_features_df, target_feature_df
+
+    except Exception as e:
+        raise HotelBookingException(f"Error in separate_features_and_target: {str(e)}", sys) from e

@@ -17,7 +17,7 @@ TRAIN_FILE_NAME: str = "train.csv"
 TEST_FILE_NAME: str = "test.csv"
 
 # dataset name for saving it in 'artifact/data' after importing it from MySQL
-FILE_NAME: str = "hotel_booking.csv"
+# FILE_NAME: str = "hotel_booking.csv"
 MODEL_FILE_NAME = "model.pkl"
 
 TARGET_COLUMN = "is_canceled"
@@ -31,8 +31,10 @@ SCHEMA_FILE_PATH = os.path.join("config", "schema.yaml")
 DATASET_NAME = "hotel_booking"
 DATA_INGESTION_DIR_NAME: str = "data_ingestion"
 DATA_INGESTION_DATA_DIR: str = "data"
+DSTA_INGESTION_DATA_FILE_NAME: str = "data.csv"
 DATA_INGESTION_INGESTED_DIR: str = "ingested"
-DATA_INGESTION_TRAIN_TEST_SPLIT_RATIO: float = 0.2
+DATA_INGESTION_INGESTED_FILE_NAME: str = "ingested.csv"
+# DATA_INGESTION_TRAIN_TEST_SPLIT_RATIO: float = 0.2
 
 
 # Data Validation related constants
@@ -45,3 +47,11 @@ DATA_VALIDATION_DRIFT_REPORT_FILE_NAME: str = "report.yaml"
 DATA_PREPROCESSING_DIR_NAME: str = "data_preprocessing"
 DATA_PREPROCESSING_PREPROCESSED_DATA_DIR: str = "preprocessed"
 DATA_PREPROCESSING_PREPROCESSED_OBJECT_DIR: str = "preprocessed_object"
+
+
+# Model Training related constants
+MODEL_TRAINER_DIR_NAME: str = "model_trainer"
+MODEL_TRAINER_TRAINED_MODEL_DIR: str = "trained_model"
+MODEL_TRAINER_TRAINED_MODEL_NAME: str = "model.pkl"
+MODEL_TRAINER_EXPECTED_SCORE: float = 0.75
+MODEL_TRAINER_MODEL_CONFIG_FILE_PATH: str = os.path.join("config", "model.yaml")

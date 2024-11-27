@@ -1,10 +1,11 @@
+import os
 import sys
 
 import numpy as np
 import pandas as pd
 from imblearn.combine import SMOTEENN
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler, OneHotEncoder, OrdinalEncoder
+from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 from sklearn.compose import ColumnTransformer
 
 from src.hotel_booking_cancellation.constants import TARGET_COLUMN, SCHEMA_FILE_PATH, CURRENT_YEAR
@@ -12,7 +13,7 @@ from src.hotel_booking_cancellation.entity.config_entity import DataPreprocessin
 from src.hotel_booking_cancellation.entity.artifact_entity import DataPreprocessingArtifact, DataIngestionArtifact, DataValidationArtifact
 from src.hotel_booking_cancellation.exception import HotelBookingException
 from src.hotel_booking_cancellation.logger import logging
-from src.hotel_booking_cancellation.utils.main_utils import save_object, save_numpy_array_data, read_yaml_file
+from src.hotel_booking_cancellation.utils.main_utils import read_data, separate_features_and_target, save_object, read_yaml_file
 
 
 
@@ -38,13 +39,37 @@ class DataPreprocessing:
         except Exception as e:
             raise HotelBookingException(e, sys)
         
+
+
+    # Add the target feature in dataset
     @staticmethod
-    def read_data(file_path) -> pd.DataFrame:
-        try:
-            return pd.read_csv(file_path)
-        except Exception as e:
-            raise HotelBookingException(e, sys)
+    def add_target_to_preprocessed_features(preprocessed_features: np.ndarray, target_feature: pd.Series) -> pd.DataFrame:
+        """
+        Method Name: add_target_to_preprocessed_features
+        Description: Converts the preprocessed features into a DataFrame, appends the target feature, 
+                    and returns the complete DataFrame.
         
+        Input:
+            - preprocessed_features: Numpy array of preprocessed input features.
+            - target_feature: Pandas Series containing target labels.
+            - feature_columns: List of column names corresponding to the input features.
+        
+        Output:
+            - DataFrame with preprocessed input features and target feature appended.
+        """
+        try:
+            logging.info("Converting preprocessed features into a DataFrame")
+            preprocessed_df = pd.DataFrame(preprocessed_features)
+            
+            logging.info("Adding target feature to the preprocessed DataFrame")
+            preprocessed_df[TARGET_COLUMN] = target_feature.values
+            
+            logging.info("Successfully added target feature to the preprocessed DataFrame")
+            return preprocessed_df
+        
+        except Exception as e:
+            raise HotelBookingException(f"Error while adding target to preprocessed features: {str(e)}", sys) from e
+
 
 
 
@@ -157,76 +182,82 @@ class DataPreprocessing:
 
 
     # Function for Getting Data Preprocessing object
-    def get_data_preprocessing_object(self) -> Pipeline:
-        """
-        Method Name :   get_data_preprocessing_object
-        Description :   This method creates and returns a data preprocessing object for the data
-        
-        Output      :   data preprocessing object is created and returned 
-        On Failure  :   Write an exception log and then raise an exception
-        """
+    def get_preprocessing_pipeline(self) -> Pipeline:
         logging.info("Entered get_data_preprocessing_object method of DataPreprocessing class")
-
         try:
+            # Fetch schema config
+            onehot_encoding_columns = self._schema_config.get('onehot_encoding_columns', [])
+            label_encoding_columns = self._schema_config.get('label_encoding_columns', [])
+            scaling_columns = self._schema_config.get('scaling_columns', [])
+            logging.info('Preprocessing columns fetched from schema.yaml')
 
-            onehot_encoding_columns = self._schema_config.get('onehot_encoding_columns',[])
-            ordinal_encoding_columns = self._schema_config.get('ordinal_encoding_columns',[])
-            scaling_features = self._schema_config.get('scaling_columns',[])
-            
-            logging.info('Preprocessing columns are fetched from schema.yaml')
-
-            # month_order for ordinal encoding so it can be encoded in proper order
-            month_order = ['January', 'February', 'March', 'April', 
+            # Define individual transformer functions
+            def label_encoding_function(data: pd.DataFrame) -> pd.DataFrame:
+                month_order = ['January', 'February', 'March', 'April', 
                             'May', 'June', 'July', 'August', 
                             'September', 'October', 'November', 'December']
-            
+                columns = label_encoding_columns if isinstance(label_encoding_columns, list) else [label_encoding_columns]
+                for col in columns:
+                    data[col] = data[col].apply(lambda x: month_order.index(x) + 1)
+                logging.info(f"Label encoding applied on columns: {columns}")
+                return data
+
+            def onehot_encoding_function(data: pd.DataFrame) -> pd.DataFrame:
+                data = pd.get_dummies(data, columns=onehot_encoding_columns, drop_first=True)
+                logging.info(f"One-hot encoding applied on columns: {onehot_encoding_columns}")
+                return data
+
+            # Initialize transformers
+            label_encoder = FunctionTransformer(label_encoding_function)
+            onehot_encoder = FunctionTransformer(onehot_encoding_function)
             scaler = MinMaxScaler()
-            onehot_encoder = OneHotEncoder()
-            ordinal_encoder = OrdinalEncoder(categories=[month_order])
+            logging.info("Initialized MinMaxScaler, Custom One-hot Encoder, Label Encoder")
 
-            logging.info("Initialized MinMaxScaler, OneHotEncoder, OrdinalEncoder")
+            # Combine transformers in ColumnTransformer
+            transformers = []
+            if label_encoding_columns:
+                transformers.append(('label_encoder', label_encoder, label_encoding_columns))
+            if onehot_encoding_columns:
+                transformers.append(('onehot_encoder', onehot_encoder, onehot_encoding_columns))
+            if scaling_columns:
+                transformers.append(('scaler', scaler, scaling_columns))
+            
+            preprocessor = ColumnTransformer(transformers=transformers, remainder='passthrough')
 
-            preprocessor = ColumnTransformer(
-                [
-                    ("OneHotEncoder", onehot_encoder, onehot_encoding_columns),
-                    ("OrdinalEncoder", ordinal_encoder, ordinal_encoding_columns),
-                    ("MinMaxScaler", scaler, scaling_features)
-                ]
-            )
-
-            logging.info("Created preprocessor object from ColumnTransformer")
-
-            logging.info("Exited get_data_preprocessor_object method of DataPreprocessor class")
-            return preprocessor
+            # Create pipeline
+            data_pipeline = Pipeline(steps=[('preprocessor', preprocessor)])
+            logging.info("Pipeline created successfully.")
+            return data_pipeline
 
         except Exception as e:
+            logging.error(f"Error in get_data_preprocessor_object: {str(e)}")
             raise HotelBookingException(f"Error in get_data_preprocessor_object: {str(e)}", sys) from e
 
 
 
-    # Funcion for Separating Target feature from Dataset
-    def separate_features_and_target(self, df: pd.DataFrame, target_column: str) -> tuple:
+    # Function to export preprocessed data
+    def export_preprocessed_data(self, preprocessed_dataframe: pd.DataFrame, preprocessed_file_path) -> pd.DataFrame:
         """
-        Method Name :   separate_features_and_target
-        Description :   Separates independent features and dependent (target) feature from the DataFrame.
-        
-        Input       :   df            -> The input DataFrame (train/test).
-                    target_column  -> The name of the target column in the DataFrame.
-        
-        Output      :   tuple         -> A tuple containing the independent features DataFrame and the target feature series.
+        Saves the preprocessed data into a specified file path.
+        Args:
+            preprocessed_dataframe (DataFrame): Preprocessed DataFrame to be saved.
+        Returns:
+            DataFrame: The preprocessed DataFrame after being saved.
         """
         try:
-            logging.info(f"Separating independent features and target feature for column: {target_column}")
+            logging.info("Exporting preprocessed data to a file.")
             
-            # Separating independent features (X) and target feature (y)
-            input_features_df = df.drop(columns=[target_column], axis=1)
-            target_feature_df = df[target_column]
-            
-            logging.info("Independent features and target feature separated successfully")
-            return input_features_df, target_feature_df
+            # Ensure the directory exists
+            dir_path = os.path.dirname(preprocessed_file_path)
+            os.makedirs(dir_path, exist_ok=True)
 
+            logging.info(f"Saving preprocessed data to file path: {preprocessed_file_path}")
+            preprocessed_dataframe.to_csv(preprocessed_file_path, index=False, header=True)
+
+            return preprocessed_dataframe
         except Exception as e:
-            raise HotelBookingException(f"Error in separate_features_and_target: {str(e)}", sys) from e
+            raise HotelBookingException(f"Error in export_preprocessed_data: {str(e)}", sys) from e
+
 
 
 
@@ -243,16 +274,16 @@ class DataPreprocessing:
 
                 # Initialize preprocessor object
                 logging.info("Starting data preprocessing")
-                preprocessor = self.get_data_preprocessing_object()
+                preprocessor = self.get_preprocessing_pipeline()
                 logging.info("Got the preprocessor object")
 
 
                 # Fetching Train and Test datasets
                 logging.info("Start Fetching Train dataset")
-                train_df = DataPreprocessing.read_data(file_path=self.data_ingestion_artifact.trained_file_path)
+                train_df = read_data(file_path=self.data_ingestion_artifact.trained_file_path)
                 
                 logging.info("Start Fetching Test dataset")
-                test_df = DataPreprocessing.read_data(file_path=self.data_ingestion_artifact.test_file_path)
+                test_df = read_data(file_path=self.data_ingestion_artifact.test_file_path)
                 logging.info("Got the Train and Test data")
 
 
@@ -263,7 +294,7 @@ class DataPreprocessing:
                 logging.info("Start Dropping directly related features from Test dataset")
                 test_df = self.drop_directly_related_features(test_df)
                 logging.info("Dropped directly related features from Train and Test datasets")
-
+                
 
                 # Handle missing values in Train and Test datasets
                 logging.info("Start Handling missing values in Training dataset")
@@ -272,7 +303,7 @@ class DataPreprocessing:
                 logging.info("Start Handling missing values in Testing dataset")
                 test_df = self.handle_missing_values(test_df)
                 logging.info("Handled Missing values in Train and Test datasets")
-
+                
 
                 # Handle noisy data in Train and Test datasets
                 logging.info("Start Handling noisy data in Train and dataset")
@@ -285,38 +316,39 @@ class DataPreprocessing:
 
                 # Seprating Independent Features and Dependent Feature 
                 logging.info("Start Seprating Independent Features and Dependent Feature for Train dataset")
-                input_feature_train_df, target_feature_train_df = self.separate_features_and_target(train_df, target_column=TARGET_COLUMN)
+                train_input_feature, train_target_feature = separate_features_and_target(train_df, target_column=TARGET_COLUMN)
 
                 logging.info("Start Seprating Independent Features and Dependent Feature for Test dataset")
-                input_feature_test_df, target_feature_test_df = self.separate_features_and_target(test_df, target_column=TARGET_COLUMN)
+                test_input_feature, test_target_feature = separate_features_and_target(test_df, target_column=TARGET_COLUMN)
                 logging.info("Independent Features and Dependent Feature are separated from Train and Test datasets")
-
-
+                
 
                 # Appliying Preprocessing object on Training and Testing Datasets
                 logging.info("Start Appliying Preprocessing object on Train dataset")
-                preprocessed_input_train_arr = preprocessor.fit_transform(input_feature_train_df)
+                train_preprocessed_input_feature = preprocessor.fit_transform(train_input_feature)
 
                 logging.info("Start Appliying Preprocessing object on Test dataset")
-                preprocessed_input_test_arr = preprocessor.transform(input_feature_test_df)
+                test_preprocessed_input_feature = preprocessor.fit_transform(test_input_feature)
                 logging.info("Applied Preprocessing object on Train and Test datasets")
+                
 
+                # Adding the target column back to the preprocessed DataFrame
+                logging.info("Start Adding target feature to preprocessed Train dataset")
+                train_preprocessed_df = self.add_target_to_preprocessed_features(train_preprocessed_input_feature, 
+                                                                                 train_target_feature)
 
-                # Combining train and test arrays with target feature (train_arr, test_arr)
-                logging.info("Start Combining train features and target feature as train array")
-                train_arr = np.c_[preprocessed_input_train_arr, np.array(target_feature_train_df)]
+                logging.info("Start Adding target feature to preprocessed Test dataset")
+                test_preprocessed_df = self.add_target_to_preprocessed_features(test_preprocessed_input_feature, 
+                                                                                 test_target_feature)
+                logging.info("Added target feature to preprocessed Train and Test datasets")
+                
 
-                logging.info("Start Combining test features and target feature as test array")
-                test_arr = np.c_[preprocessed_input_test_arr, np.array(target_feature_test_df)]
-                logging.info("Train and test arrays created successfully")
-
-
-                # Saving preprocessor and train, test arrays
-                logging.info("Start Saving preprocessor object and train, test arrays")
+                # Saving preprocessor and train, test datasets
+                logging.info("Start Saving preprocessor object and train, test datasets")
                 save_object(self.data_preprocessing_config.preprocessed_object_file_path, preprocessor)
-                save_numpy_array_data(self.data_preprocessing_config.preprocessed_train_file_path, array=train_arr)
-                save_numpy_array_data(self.data_preprocessing_config.preprocessed_test_file_path, array=test_arr)
-                logging.info("Saved the preprocessor object and train, test arrays")
+                self.export_preprocessed_data(train_preprocessed_df, self.data_preprocessing_config.preprocessed_train_file_path)
+                self.export_preprocessed_data(test_preprocessed_df, self.data_preprocessing_config.preprocessed_test_file_path)
+                logging.info("Saved the preprocessor object and train, test datasets")
 
                 logging.info(
                     "Exited initiate_data_preprocessor method of DataPreprocessor class"

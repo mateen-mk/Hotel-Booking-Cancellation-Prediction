@@ -5,8 +5,9 @@ from dataclasses import dataclass
 # Data Ingestion Artifact
 @dataclass
 class DataIngestionArtifact:
-    trained_file_path:str 
-    test_file_path:str 
+    ingest_file_path: str
+    # trained_file_path:str 
+    # test_file_path:str 
 
 
 # Data Validation Artifact
@@ -23,3 +24,19 @@ class DataPreprocessingArtifact:
     preprocessed_object_file_path:str    # file path to preprocessing.pkl
     preprocessed_train_file_path:str     # file path to trained data in numpy array format (train.npy)
     preprocessed_test_file_path:str      # file path to test data in numpy array format (test.npy)
+
+
+# Classification Matrix Artifact
+@dataclass
+class ClassificationMetrixArtifact:
+    accuracy: str
+    f1_score:float
+    precision_score:float
+    recall_score:float
+
+
+# Model Training Artifacts
+@dataclass
+class ModelTrainerArtifact:
+    trained_model_file_path:str 
+    metric_artifact:ClassificationMetrixArtifact

@@ -1,0 +1,121 @@
+grid_search:
+  class: GridSearchCV
+  module: sklearn.model_selection
+  params:
+    cv: 3
+    scoring: 'accuracy'
+    n_jobs: -1
+    verbose: 3
+
+model_selection:
+
+  # Decision Tree Classifier parameters
+  dtc:
+    class: DecisionTreeClassifier
+    module: sklearn.tree
+    params:
+      criterion: gini
+      max_depth: 10
+      min_samples_split: 10
+      min_samples_leaf: 2
+    search_param_grid:
+      criterion:
+        - gini
+        - entropy
+      max_depth:
+        - 10
+        - 20
+        - 30
+      min_samples_split:
+        - 10
+        - 20
+      min_samples_leaf:
+        - 2
+        - 4
+        - 8
+      class_weight:
+        - {0: 1, 1: 2}
+
+  # Random Forest Classifier parameters
+  rfc:
+    class: RandomForestClassifier
+    module: sklearn.ensemble
+    params:
+      n_estimators: 100
+      max_depth: 10
+      min_samples_split: 10
+      min_samples_leaf: 2
+    search_param_grid:
+      n_estimators:
+        - 100
+        - 200
+      max_depth:
+        - 10
+        - 20
+        - 30
+      min_samples_split:
+        - 10
+        - 15
+      min_samples_leaf:
+        - 2
+        - 4
+      max_features:
+        - sqrt
+        - log2
+      bootstrap:
+        - true
+      class_weight:
+        - {0: 1, 1: 2}
+
+  # Gradient Boosting Classifier parameters
+  gb:
+    class: GradientBoostingClassifier
+    module: sklearn.ensemble
+    params:
+      n_estimators: 50
+      learning_rate: 0.01
+      max_depth: 3
+    search_param_grid:
+      n_estimators:
+        - 50
+        - 100
+      learning_rate:
+        - 0.01
+        - 0.1
+      max_depth:
+        - 3
+        - 5
+      subsample:
+        - 0.8
+      max_features:
+        - auto
+        - sqrt
+      loss:
+        - exponential
+        - log_loss
+
+  # XGBoost Classifier parameters
+  xgb:
+    class: XGBClassifier
+    module: xgboost
+    params:
+      n_estimators: 100
+      learning_rate: 0.01
+      max_depth: 3
+    search_param_grid:
+      n_estimators:
+        - 100
+        - 200
+      learning_rate:
+        - 0.01
+        - 0.1
+      max_depth:
+        - 3
+        - 5
+      subsample:
+        - 0.8
+      colsample_bytree:
+        - 0.8
+      gamma:
+        - 0.1
+        - 0.3

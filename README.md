@@ -14,3 +14,19 @@
 4. Data Transformation
     - Encoding Categorical features
     - Normalize/Scale features
+
+
+
+#### to do
+- Go through same as notebooks
+    1. Data ingestion:
+        - fetch data from MySQL
+        - remove sensitive features
+        - save data in feature_store: without splitting it
+    2. Data validation:
+        - validate whole data: instead of train and test differntly
+    3. Data Preprocessing:
+        - remove directly related features
+        - handle missing values
+        - handle noisy data
+        - and go with notebooks
