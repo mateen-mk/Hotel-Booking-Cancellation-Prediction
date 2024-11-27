@@ -2,14 +2,15 @@ import os
 import sys
 from pandas import DataFrame
 
-from src.hotel_booking_cancellation.constants import DATASET_NAME
-from src.hotel_booking_cancellation.constants import SCHEMA_FILE_PATH
-from src.hotel_booking_cancellation.utils.main_utils import read_yaml_file
+from src.hotel_booking_cancellation.logger import logging
 from src.hotel_booking_cancellation.entity.config_entity import DataIngestionConfig
 from src.hotel_booking_cancellation.entity.artifact_entity import DataIngestionArtifact
-from src.hotel_booking_cancellation.exception import HotelBookingException
-from src.hotel_booking_cancellation.logger import logging
 from src.hotel_booking_cancellation.data_access.hotel_booking_data import HotelBookingData
+from src.hotel_booking_cancellation.exception import HotelBookingException
+
+from src.hotel_booking_cancellation.utils.main_utils import YamlUtils
+from src.hotel_booking_cancellation.constants import DATASET_NAME
+from src.hotel_booking_cancellation.constants import SCHEMA_FILE_PATH
 
 
 class DataIngestion:
@@ -22,15 +23,16 @@ class DataIngestion:
         Raises:
             HotelBookingException: If an error occurs during initialization. The exception message and the original error are provided.
         """
-        logging.info("_"*100)
-        logging.info("| | Started Data Ingestion Stage:")
-        logging.info("- "*50)
         try:
+            logging.info("_"*100)
+            logging.info("")
+            logging.info("| | Started Data Ingestion Stage:")
+            logging.info("- "*50)
 
             self.dataset_name = DATASET_NAME
             self.data_ingestion_config = data_ingestion_config
             # Read the schema configuration for sensitive columns and other details
-            self._schema_config = read_yaml_file(file_path=SCHEMA_FILE_PATH)
+            self._schema_config = YamlUtils.read_yaml_file(file_path=SCHEMA_FILE_PATH)
         except Exception as e:
             raise HotelBookingException(f"Error during DataIngestion initialization: {str(e)}", sys) from e
 

@@ -24,6 +24,8 @@ TARGET_COLUMN = "is_canceled"
 CURRENT_YEAR = date.today().year
 PREPROCESSING_OBJECT_FILE_NAME = "preprocessing.pkl"
 SCHEMA_FILE_PATH = os.path.join("config", "schema.yaml")
+TRAIN_TEST_SPLIT_RATIO: float = 0.2
+
 
 
 
@@ -34,7 +36,6 @@ DATA_INGESTION_DATA_DIR: str = "data"
 DSTA_INGESTION_DATA_FILE_NAME: str = "data.csv"
 DATA_INGESTION_INGESTED_DIR: str = "ingested"
 DATA_INGESTION_INGESTED_FILE_NAME: str = "ingested.csv"
-# DATA_INGESTION_TRAIN_TEST_SPLIT_RATIO: float = 0.2
 
 
 # Data Validation related constants

@@ -3,8 +3,8 @@ from src.hotel_booking_cancellation.exception import HotelBookingException
 from src.hotel_booking_cancellation.logger import logging
 from src.hotel_booking_cancellation.components.data_ingestion import DataIngestion
 from src.hotel_booking_cancellation.components.data_validation import DataValidation
-from src.hotel_booking_cancellation.components.data_preprocessing import DataPreprocessing
-from src.hotel_booking_cancellation.components.model_trainer import ModelTrainer
+# from src.hotel_booking_cancellation.components.data_preprocessing import DataPreprocessing
+# from src.hotel_booking_cancellation.components.model_trainer import ModelTrainer
 
 from src.hotel_booking_cancellation.entity.config_entity import (DataIngestionConfig,
                                                                  DataValidationConfig,
@@ -22,7 +22,7 @@ class TrainingPipeline:
         logging.info("- - - - - Started Training Pipeline - - - - -")
         logging.info("* "*50)
         self.data_ingestion_config = DataIngestionConfig()
-        # self.data_validation_config = DataValidationConfig()
+        self.data_validation_config = DataValidationConfig()
         # self.data_preprocessing_config = DataPreprocessingConfig()
         # self.model_trainer_config = ModelTrainerConfig()
 
@@ -35,7 +35,7 @@ class TrainingPipeline:
         try:
             logging.info("")
             logging.info("")
-            logging.info("$ Started start_data_ingestion method of TrainingPipline Class:")
+            logging.info("$ Entered start_data_ingestion method of TrainingPipline Class:")
             
             data_ingestion = DataIngestion(data_ingestion_config=self.data_ingestion_config)
             data_ingestion_artifact = data_ingestion.initiate_data_ingestion()
@@ -50,30 +50,30 @@ class TrainingPipeline:
             raise HotelBookingException(e, sys) from e
 
 
-    # # Data Validation Function
-    # def start_data_validation(self, data_ingestion_artifact: DataIngestionArtifact) -> DataValidationArtifact:
-    #     """
-    #     This method of TrainingPipeline class is responsible for starting data validation component
-    #     """
-    #     logging.info("Entered the start_data_validation method of TrainingPipeline class")
+    # Data Validation Function
+    def start_data_validation(self, data_ingestion_artifact: DataIngestionArtifact) -> DataValidationArtifact:
+        """
+        This method of TrainingPipeline class is responsible for starting data validation component
+        """
+        try:
+            logging.info("")
+            logging.info("")
+            logging.info("$ Entered start_data_validation method of TrainingPipline Class:")
 
-    #     try:
-    #         data_validation = DataValidation(data_ingestion_artifact=data_ingestion_artifact,
-    #                                          data_validation_config=self.data_validation_config
-    #                                          )
+            data_validation = DataValidation(data_ingestion_artifact=data_ingestion_artifact,
+                                             data_validation_config=self.data_validation_config)
+            data_validation_artifact = data_validation.initiate_data_validation()
+            logging.info("- "*50)
+            logging.info("- - - Data Validated Successfully! - - -")
 
-    #         data_validation_artifact = data_validation.initiate_data_validation()
+            logging.info("")
+            logging.info("! ! ! Exited the start_data_validation method of TrainingPipeline class:")
+            logging.info("_"*100)
 
-    #         logging.info("Performed the data validation operation")
+            return data_validation_artifact
 
-    #         logging.info(
-    #             "Exited the start_data_validation method of TrainingPipeline class"
-    #         )
-
-    #         return data_validation_artifact
-
-    #     except Exception as e:
-    #         raise HotelBookingException(e, sys) from e
+        except Exception as e:
+            raise HotelBookingException(e, sys) from e
 
 
     # # Data Preprocessing Function
@@ -117,7 +117,7 @@ class TrainingPipeline:
         """
         try:
             data_ingestion_artifact = self.start_data_ingestion()
-            # data_validation_artifact = self.start_data_validation(data_ingestion_artifact)
+            data_validation_artifact = self.start_data_validation(data_ingestion_artifact)
             # data_preprocessing_artifact = self.start_data_preprocessing(data_ingestion_artifact, data_validation_artifact)
             # model_training_artifact = self.start_model_trainer(data_preprocessing_artifact)
         except Exception as e:

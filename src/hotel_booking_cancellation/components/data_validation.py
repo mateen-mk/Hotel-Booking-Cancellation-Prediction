@@ -7,12 +7,13 @@ from evidently.model_profile.sections import DataDriftProfileSection
 
 from pandas import DataFrame
 
-from src.hotel_booking_cancellation.exception import HotelBookingException
 from src.hotel_booking_cancellation.logger import logging
-from src.hotel_booking_cancellation.utils.main_utils import read_yaml_file, write_yaml_file
-from src.hotel_booking_cancellation.entity.artifact_entity import DataIngestionArtifact, DataValidationArtifact
 from src.hotel_booking_cancellation.entity.config_entity import DataValidationConfig
-from src.hotel_booking_cancellation.constants import SCHEMA_FILE_PATH
+from src.hotel_booking_cancellation.entity.artifact_entity import DataIngestionArtifact, DataValidationArtifact
+from src.hotel_booking_cancellation.exception import HotelBookingException
+
+from src.hotel_booking_cancellation.utils.main_utils import YamlUtils, DataUtils, TrainTestSplitUtils
+from src.hotel_booking_cancellation.constants import SCHEMA_FILE_PATH, TRAIN_TEST_SPLIT_RATIO
 
 
 class DataValidation:
@@ -22,13 +23,14 @@ class DataValidation:
         :param data_validation_config: configuration for data validation
         """
         try:
-            logging.info("- "*50)
-            logging.info("- - - - - Started Data Validation Stage - - - - -")
+            logging.info("_"*100)
+            logging.info("")
+            logging.info("| | Started Data Validation Stage:")
             logging.info("- "*50)
 
             self.data_ingestion_artifact = data_ingestion_artifact
             self.data_validation_config = data_validation_config
-            self._schema_config =read_yaml_file(file_path=SCHEMA_FILE_PATH)
+            self._schema_config = YamlUtils.read_yaml_file(file_path=SCHEMA_FILE_PATH)
         except Exception as e:
             raise HotelBookingException(e,sys)
 
@@ -100,13 +102,6 @@ class DataValidation:
         
 
 
-    @staticmethod
-    def read_data(file_path) -> DataFrame:
-        try:
-            return pd.read_csv(file_path)
-        except Exception as e:
-            raise HotelBookingException(e, sys)
-
     def detect_dataset_drift(self, reference_df: DataFrame, current_df: DataFrame, ) -> bool:
         """
         Method Name :   detect_dataset_drift
@@ -123,7 +118,7 @@ class DataValidation:
             report = data_drift_profile.json()
             json_report = json.loads(report)
 
-            write_yaml_file(file_path=self.data_validation_config.drift_report_file_path, content=json_report)
+            YamlUtils.write_yaml_file(file_path=self.data_validation_config.drift_report_file_path, content=json_report)
 
             n_features = json_report["data_drift"]["data"]["metrics"]["n_features"]
             n_drifted_features = json_report["data_drift"]["data"]["metrics"]["n_drifted_features"]
@@ -146,38 +141,29 @@ class DataValidation:
             validation_error_msg = ""
             logging.info("Starting data validation process.")
 
-            # Reading training and testing datasets
-            train_df, test_df = (
-                DataValidation.read_data(file_path=self.data_ingestion_artifact.trained_file_path),
-                DataValidation.read_data(file_path=self.data_ingestion_artifact.test_file_path),
-            )
+            # Reading dataset
+            df = DataUtils.read_data(file_path=self.data_ingestion_artifact.ingest_file_path)
             logging.info("Training and testing datasets loaded successfully.")
 
             # Step 1: Validate number of columns in training and testing datasets
-            status = self.validate_number_of_columns(dataframe=train_df)
-            logging.info(f"All required columns present in training dataframe: {status}")
+            status = self.validate_number_of_columns(dataframe=df)
+            logging.info(f"All required columns present in dataframe: {status}")
             if not status:
-                validation_error_msg += "Required columns are missing in training dataframe.\n"
+                validation_error_msg += "Required columns are missing in dataframe.\n"
 
-            status = self.validate_number_of_columns(dataframe=test_df)
-            logging.info(f"All required columns present in testing dataframe: {status}")
-            if not status:
-                validation_error_msg += "Required columns are missing in testing dataframe.\n"
 
             # Step 2: Validate column existence in training and testing datasets
-            status = self.is_column_exist(df=train_df)
-            logging.info(f"Validation of column existence in training dataframe: {status}")
+            status = self.is_column_exist(df=df)
+            logging.info(f"Validation of column existence in dataframe: {status}")
             if not status:
-                validation_error_msg += "Required or sensitive columns validation failed for training dataframe.\n"
-
-            status = self.is_column_exist(df=test_df)
-            logging.info(f"Validation of column existence in testing dataframe: {status}")
-            if not status:
-                validation_error_msg += "Required or sensitive columns validation failed for testing dataframe.\n"
+                validation_error_msg += "Required or sensitive columns validation failed for dataframe.\n"
 
 
             # Consolidate validation status
             validation_status = len(validation_error_msg) == 0
+
+            # Step 3: Split dataset into training and testing datasets
+            train_df, test_df = TrainTestSplitUtils.train_test_split_for_data_validation(dataframe=df, test_size=TRAIN_TEST_SPLIT_RATIO)
 
             # Step 4: Detect dataset drift if validation passes
             if validation_status:
