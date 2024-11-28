@@ -32,3 +32,7 @@
         - handle missing values
         - handle noisy data
         - and go with notebooks
+    4. Model Building:
+        - read data from artifact/data_prprocessing/preprocessed/preprocessed.csv
+        - perform train-test split
+        - Now look into notebook and figure out

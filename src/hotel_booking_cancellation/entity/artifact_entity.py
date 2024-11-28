@@ -33,6 +33,7 @@ class ClassificationMetrixArtifact:
     f1_score:float
     precision_score:float
     recall_score:float
+    auc: float
 
 
 # Model Training Artifacts

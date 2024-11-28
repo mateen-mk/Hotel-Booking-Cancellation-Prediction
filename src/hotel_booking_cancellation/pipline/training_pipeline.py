@@ -4,7 +4,7 @@ from src.hotel_booking_cancellation.logger import logging
 from src.hotel_booking_cancellation.components.data_ingestion import DataIngestion
 from src.hotel_booking_cancellation.components.data_validation import DataValidation
 from src.hotel_booking_cancellation.components.data_preprocessing import DataPreprocessing
-# from src.hotel_booking_cancellation.components.model_trainer import ModelTrainer
+from src.hotel_booking_cancellation.components.model_trainer import ModelTrainer
 
 from src.hotel_booking_cancellation.entity.config_entity import (DataIngestionConfig,
                                                                  DataValidationConfig,
@@ -24,7 +24,7 @@ class TrainingPipeline:
         self.data_ingestion_config = DataIngestionConfig()
         self.data_validation_config = DataValidationConfig()
         self.data_preprocessing_config = DataPreprocessingConfig()
-        # self.model_trainer_config = ModelTrainerConfig()
+        self.model_trainer_config = ModelTrainerConfig()
 
 
     # Data Ingestion Function
@@ -103,20 +103,31 @@ class TrainingPipeline:
         
 
 
-    # # Model Training Function
-    # def start_model_trainer(self, data_preprocessing_artifact: DataPreprocessingArtifact) -> ModelTrainerArtifact:
-    #     """
-    #     This method of TrainPipeline class is responsible for starting model training
-    #     """
-    #     try:
-    #         model_trainer = ModelTrainer(data_preprocessing_artifact=data_preprocessing_artifact,
-    #                                      model_trainer_config=self.model_trainer_config
-    #                                      )
-    #         model_trainer_artifact = model_trainer.initiate_model_trainer()
-    #         return model_trainer_artifact
+    # Model Training Function
+    def start_model_trainer(self, data_preprocessing_artifact: DataPreprocessingArtifact) -> ModelTrainerArtifact:
+        """
+        This method of TrainPipeline class is responsible for starting model training
+        """
+        try:
+            logging.info("")
+            logging.info("")
+            logging.info("$ Entered start_model_trainer method of TrainingPipline Class:")
+        
+            model_trainer = ModelTrainer(data_preprocessing_artifact=data_preprocessing_artifact,
+                                         model_trainer_config=self.model_trainer_config
+                                         )
+            model_trainer_artifact = model_trainer.initiate_model_trainer()
 
-    #     except Exception as e:
-    #         raise HotelBookingException(e, sys)
+            logging.info("- "*50)
+            logging.info("- - - Model Trained Successfully! - - -")
+
+            logging.info("")
+            logging.info("! ! ! Exited the start_model_trainer method of TrainingPipeline class:")
+            logging.info("_"*100)
+            return model_trainer_artifact
+
+        except Exception as e:
+            raise HotelBookingException(e, sys)
 
 
     # Run the training pipeline
@@ -128,6 +139,6 @@ class TrainingPipeline:
             data_ingestion_artifact = self.start_data_ingestion()
             data_validation_artifact = self.start_data_validation(data_ingestion_artifact)
             data_preprocessing_artifact = self.start_data_preprocessing(data_ingestion_artifact, data_validation_artifact)
-            # model_training_artifact = self.start_model_trainer(data_preprocessing_artifact)
+            model_training_artifact = self.start_model_trainer(data_preprocessing_artifact)
         except Exception as e:
             raise HotelBookingException(e, sys) from e

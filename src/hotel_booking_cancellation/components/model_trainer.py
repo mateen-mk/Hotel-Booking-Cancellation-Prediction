@@ -1,172 +1,191 @@
 import sys
-from typing import Tuple
 
 import importlib
 import pandas as pd
-from pandas import DataFrame
 from sklearn.model_selection import GridSearchCV
-from sklearn.pipeline import Pipeline
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from neuro_mf  import ModelFactory
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 
-from src.hotel_booking_cancellation.exception import HotelBookingException
 from src.hotel_booking_cancellation.logger import logging
-from src.hotel_booking_cancellation.utils.main_utils import read_data, separate_features_and_target, load_numpy_array_data, read_yaml_file, load_object, save_object
 from src.hotel_booking_cancellation.entity.config_entity import ModelTrainerConfig
 from src.hotel_booking_cancellation.entity.artifact_entity import DataPreprocessingArtifact, ModelTrainerArtifact, ClassificationMetrixArtifact
 from src.hotel_booking_cancellation.entity.estimator import HotelBookingModel
-from src.hotel_booking_cancellation.constants import TARGET_COLUMN
+from src.hotel_booking_cancellation.exception import HotelBookingException
+
+from src.hotel_booking_cancellation.utils.main_utils import DataUtils, TrainTestSplitUtils, YamlUtils, ObjectUtils
+from src.hotel_booking_cancellation.constants import TARGET_COLUMN, TRAIN_TEST_SPLIT_RATIO
+
+
 
 class ModelTrainer:
+    """
+    Class Name: ModelTrainer
+    Description: Trains a model using neuro_mf and returns trained model object and classification metrics
+    """
     def __init__(self, data_preprocessing_artifact: DataPreprocessingArtifact,
                  model_trainer_config: ModelTrainerConfig):
         """
         :param data_ingestion_artifact: Output reference of data ingestion artifact stage
         :param data_preprocessing_config: Configuration for data preprocessing
         """
-        logging.info("- "*50)
-        logging.info("- - - - - Started Data Preprocessing Stage - - - - -")
-        logging.info("- "*50)
-
-        self.data_preprocessing_artifact = data_preprocessing_artifact
-        self.model_trainer_config = model_trainer_config
-
-    def get_model_object_and_report(self, train: DataFrame, test: DataFrame) -> Tuple[object, object]:
-        """
-        Method Name :   get_model_object_and_report
-        Description :   This function uses neuro_mf to get the best model object and report of the best model
-        
-        Output      :   Returns metric artifact object and best model object
-        On Failure  :   Write an exception log and then raise an exception
-        """
         try:
-            logging.info("Using neuro_mf to get best model object and report")
-            model_factory = ModelFactory(model_config_path=self.model_trainer_config.model_config_file_path)
-            
+            logging.info("_"*100)
+            logging.info("")
+            logging.info("| | Started Model Trainer Stage:")
+            logging.info("- "*50)
+
+            self.data_preprocessing_artifact = data_preprocessing_artifact
+            self.model_trainer_config = model_trainer_config
+
+        except Exception as e:
+            logging.error(f"Error in ModelTrainer initialization: {str(e)}")
+            raise HotelBookingException(f"Error during ModelTrainer initialization: {str(e)}", sys) from e
+                
+
+
+    def metrics_calculator(self, clf, X_test: pd.DataFrame, y_test: pd.Series, model_name: str) -> pd.DataFrame:
+        '''
+        This function calculates all desired performance metrics for a given model on test data.
+        The metrics are calculated specifically for class 1.
+        '''
+        try:
+            logging.info(f"Calculating performance metrics for model: {model_name}")
+            y_pred = clf.predict(X_test)
+            result = pd.DataFrame(data=[accuracy_score(y_test, y_pred),
+                                         precision_score(y_test, y_pred, pos_label=1),
+                                         recall_score(y_test, y_pred, pos_label=1),
+                                         f1_score(y_test, y_pred, pos_label=1),
+                                         roc_auc_score(y_test, clf.predict_proba(X_test)[:, 1])],
+                                   index=['Accuracy', 'Precision (Class 1)', 'Recall (Class 1)', 'F1-score (Class 1)', 'AUC (Class 1)'],
+                                   columns=[model_name])
+            result = (result * 100).round(2).astype(str) + '%'
+
+            logging.info(f"Metrics for {model_name}: {result.to_dict()}")
+            return result
+        except Exception as e:
+            raise HotelBookingException(e, sys) from e
+
+
+    def tune_hyperparameters(self, X_train: pd.DataFrame, y_train: pd.Series) -> dict:
+        logging.info("Starting hyperparameter tuning...")
+        try:
+
+            # Use 30% of the dataset for hyperparameter tuning
+            X_tune, y_tune = TrainTestSplitUtils.train_test_split_for_tuning(X_train, y_train, test_size=0.7)
+            logging.info(f"Tuning dataset size: {X_tune.shape}, {y_tune.shape}")
+
 
             # Load model configuration
-            logging.info("Loading model configuration and data")
-            model_config = read_yaml_file(self.model_trainer_config.model_config_file_path)
+            model_config = YamlUtils.read_yaml_file(self.model_trainer_config.model_config_file_path)
+            models = model_config['model_selection']
+            grid_search_params = model_config['grid_search']['params']
+            logging.info("Model configurations and hyperparameter grids loaded successfully")
 
 
-            # Split data into features (X) and target (y)
-            X_train, y_train = separate_features_and_target(train, target_column=TARGET_COLUMN)
-            X_test, y_test = separate_features_and_target(test, target_column=TARGET_COLUMN)
+            # Dictionary to store best models after tuning
+            best_models = {}
+
+            # Loop through each model and its parameters for tuning
+            for model_name, model_info in models.items():
+                logging.info(f"Tuning hyperparameters for model: {model_name}")
+
+                print(f"Tuning hyperparameters for {model_name}...")
+                model_class = getattr(importlib.import_module(model_info['module']), model_info['class'])
+                model = model_class(**model_info['params'])
+                params = model_info['search_param_grid']
+
+                # Use GridSearchCV for tuning
+                search = GridSearchCV(
+                    model,
+                    params,
+                    **grid_search_params
+                )
+                logging.info(f"GridSearchCV initialized for {model_name} with parameters: {params}")
+
+                # Fit the model using the subset of data
+                search.fit(X_tune, y_tune)
+                logging.info(f"Hyperparameter tuning completed for {model_name}")
+
+                # Save the best model
+                best_models[model_name] = search.best_estimator_
+
+                # Print best parameters and best score
+                print(f"Best parameters for {model_name}: {search.best_params_}")
+                print(f"Best cross-validation score for {model_name}: {search.best_score_}\n")
+                logging.info(f"Best parameters for {model_name}: {search.best_params_}")
+                logging.info(f"Best cross-validation score for {model_name}: {search.best_score_}\n")
 
 
-            best_model = None
-            best_accuracy = 0
-            metric_artifact = None
+            logging.info("Hyperparameter tuning completed successfully")
 
-            # Iterate through each model in the configuration
-            for model_name, model_details in model_config['model_selection'].items():
-                model_class_name = model_details['class']
-                model_module = model_details['module']
-                params = model_details['params']
-                search_param_grid = model_details['search_param_grid']
-
-                # Dynamically load the model class
-                module = importlib.import_module(model_module)
-                model_class = getattr(module, model_class_name)
-                
-                # Initialize the model
-                model = model_class(**params)
-
-                # Apply grid search for hyperparameter tuning
-                grid_search = GridSearchCV(model, search_param_grid, cv=model_config['grid_search']['params']['cv'], 
-                                        scoring=model_config['grid_search']['params']['scoring'], 
-                                        n_jobs=model_config['grid_search']['params']['n_jobs'], 
-                                        verbose=model_config['grid_search']['params']['verbose'])
-                
-                grid_search.fit(X_train, y_train)
-
-                # Get the best model from grid search
-                best_model_candidate = grid_search.best_estimator_
-
-                # Evaluate the model
-                y_pred = best_model_candidate.predict(X_test)
-                
-                accuracy = accuracy_score(y_test, y_pred)
-                f1 = f1_score(y_test, y_pred)
-                precision = precision_score(y_test, y_pred)
-                recall = recall_score(y_test, y_pred)
-
-
-                # Save the best model based on accuracy
-                if accuracy > best_accuracy:
-                    best_accuracy = accuracy
-                    best_model = best_model_candidate
-                    metric_artifact = ClassificationMetrixArtifact(accuracy=accuracy, f1_score=f1, 
-                                                                precision_score=precision, recall_score=recall)
-                    
-                
-            if best_model is None:
-                raise HotelBookingException("No suitable model found.", sys)
-
-
-            return best_model, metric_artifact
-        
+            return best_models
         except Exception as e:
-            logging.error(f"Error in get_model_object_and_report: {str(e)}")
             raise HotelBookingException(e, sys) from e
 
 
 
-
-
-        #     best_model_detail = model_factory.get_best_model(
-        #         X=X_train,y=y_train,base_accuracy=self.model_trainer_config.expected_accuracy
-        #     )
-        #     model_obj = best_model_detail.best_model
-
-        #     y_pred = model_obj.predict(X_test)
-            
-        #     accuracy = accuracy_score(y_test, y_pred) 
-        #     f1 = f1_score(y_test, y_pred)  
-        #     precision = precision_score(y_test, y_pred)  
-        #     recall = recall_score(y_test, y_pred)
-        #     metric_artifact = ClassificationMetrixArtifact(accuracy=accuracy, f1_score=f1, precision_score=precision, recall_score=recall)
-            
-        #     return best_model_detail, metric_artifact
-        
-        # except Exception as e:
-        #     raise HotelBookingException(e, sys) from e
-        
-
-    def initiate_model_trainer(self, ) -> ModelTrainerArtifact:
-        logging.info("Entered initiate_model_trainer method of ModelTrainer class")
-        """
-        Method Name :   initiate_model_trainer
-        Description :   This function initiates a model trainer steps
-        
-        Output      :   Returns model trainer artifact
-        On Failure  :   Write an exception log and then raise an exception
-        """
+    def initiate_model_trainer(self) -> ModelTrainerArtifact:
+        logging.info("Starting model training process...")
         try:
-            train_df = read_data(file_path=self.data_preprocessing_artifact.preprocessed_train_file_path)
-            test_df = read_data(file_path=self.data_preprocessing_artifact.preprocessed_test_file_path)
+            # Load data
+            data = DataUtils.read_data(self.data_preprocessing_artifact.preprocessed_data_file_path)
+            logging.info(f"Loaded preprocessed data from: {self.data_preprocessing_artifact.preprocessed_data_file_path}")
+            logging.info(f"Data shape: {data.shape}")
 
+
+            # Perform train-test split
+            X_train, X_test, y_train, y_test = TrainTestSplitUtils.train_test_split_for_model_building(data, TRAIN_TEST_SPLIT_RATIO, TARGET_COLUMN)
+            logging.info("Train-test split completed successfully")
+            logging.info(f"Training set size: {X_train.shape}, Test set size: {X_test.shape}")
+
+
+            # Tune hyperparameters and get best models
+            best_models = self.tune_hyperparameters(X_train, y_train)
+
+
+            # Evaluate models
+            best_model = None
+            best_recall = 0
+            metric_artifact = None
+
+
+            logging.info("Evaluating models on the test set")
+            for model_name, model in best_models.items():
+                logging.info(f"Evaluating model: {model_name}")
+
+                result = self.metrics_calculator(model, X_test, y_test, model_name)
+                recall = float(result.loc['Recall (Class 1)'].values[0].replace('%', ''))
+
+
+                if recall > best_recall:
+                    logging.info(f"Model {model_name} has recall: {recall}%")
+
+                    best_recall = recall
+                    best_model = model
+                    metric_artifact = ClassificationMetrixArtifact(
+                        accuracy=float(result.loc['Accuracy'].values[0].replace('%', '')),
+                        precision_score=float(result.loc['Precision (Class 1)'].values[0].replace('%', '')),
+                        recall_score=recall,
+                        f1_score=float(result.loc['F1-score (Class 1)'].values[0].replace('%', '')),
+                        auc=float(result.loc['AUC (Class 1)'].values[0].replace('%', ''))
+                    )
+
+            if best_model is None:
+                raise HotelBookingException("No suitable model found.", sys)
             
-            best_model_detail ,metric_artifact = self.get_model_object_and_report(train=train_df, test=test_df)
-            
-            preprocessing_obj = load_object(file_path=self.data_preprocessing_artifact.preprocessed_object_file_path)
 
+            # Save the best model
+            preprocessing_obj = ObjectUtils.load_object(file_path=self.data_preprocessing_artifact.preprocessed_object_file_path)
+            hotel_booking_model = HotelBookingModel(preprocessing_object=preprocessing_obj, trained_model_object=best_model)
+            ObjectUtils.save_object(file_path=self.model_trainer_config.trained_model_file_path, obj=hotel_booking_model)
+            logging.info("Best model saved successfully")
 
-            if best_model_detail.best_score < self.model_trainer_config.expected_accuracy:
-                logging.info("No best model found with score more than base score")
-                raise Exception("No best model found with score more than base score")
-
-            usvisa_model = HotelBookingModel(preprocessing_object=preprocessing_obj,
-                                       trained_model_object=best_model_detail.best_model)
-            logging.info("Created usvisa model object with preprocessor and model")
-            logging.info("Created best model file path.")
-            save_object(self.model_trainer_config.trained_model_file_path, usvisa_model)
 
             model_trainer_artifact = ModelTrainerArtifact(
                 trained_model_file_path=self.model_trainer_config.trained_model_file_path,
-                metric_artifact=metric_artifact,
+                metric_artifact=metric_artifact
             )
-            logging.info(f"Model trainer artifact: {model_trainer_artifact}")
+            logging.info(f"Model trainer artifact created: {model_trainer_artifact}")
+
             return model_trainer_artifact
         except Exception as e:
             raise HotelBookingException(e, sys) from e

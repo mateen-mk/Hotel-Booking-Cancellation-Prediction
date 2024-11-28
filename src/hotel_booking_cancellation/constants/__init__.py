@@ -51,7 +51,6 @@ DATA_PREPROCESSING_PREPROCESSED_OBJECT_DIR: str = "preprocessed_object"
 DATA_PREPROCESSING_PREPROCESSED_OBJECT_FILE_NAME = "preprocessing.pkl"
 
 
-
 # Model Training related constants
 MODEL_TRAINER_DIR_NAME: str = "model_trainer"
 MODEL_TRAINER_TRAINED_MODEL_DIR: str = "trained_model"
