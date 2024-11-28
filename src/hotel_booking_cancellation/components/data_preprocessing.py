@@ -1,75 +1,49 @@
-import os
 import sys
 
-import numpy as np
 import pandas as pd
-from imblearn.combine import SMOTEENN
+
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 from sklearn.compose import ColumnTransformer
 
-from src.hotel_booking_cancellation.constants import TARGET_COLUMN, SCHEMA_FILE_PATH, CURRENT_YEAR
+from src.hotel_booking_cancellation.logger import logging
 from src.hotel_booking_cancellation.entity.config_entity import DataPreprocessingConfig
 from src.hotel_booking_cancellation.entity.artifact_entity import DataPreprocessingArtifact, DataIngestionArtifact, DataValidationArtifact
 from src.hotel_booking_cancellation.exception import HotelBookingException
-from src.hotel_booking_cancellation.logger import logging
-from src.hotel_booking_cancellation.utils.main_utils import read_data, separate_features_and_target, save_object, read_yaml_file
+
+from src.hotel_booking_cancellation.utils.main_utils import DataUtils, ObjectUtils, YamlUtils
+from src.hotel_booking_cancellation.constants import SCHEMA_FILE_PATH
 
 
 
 
 class DataPreprocessing:
+    """
+    Class Name: DataPreprocessing
+    Description: Performs Data preprocessing and returns preprocessing object (preprocessing.pkl) and preprocessed data (preprocessed.csv)
+    """
     def __init__(self, data_ingestion_artifact: DataIngestionArtifact,
-                 data_preprocessing_config: DataPreprocessingConfig,
-                 data_validation_artifact: DataValidationArtifact):
+                 data_validation_artifact: DataValidationArtifact,
+                 data_preprocessing_config: DataPreprocessingConfig):
         """
         :param data_ingestion_artifact: Output reference of data ingestion artifact stage
         :param data_preprocessing_config: configuration for data preprocessing
         """
         try:
 
+            logging.info("_"*100)
+            logging.info("")
+            logging.info("| | Started Data Preprocessing Stage:")
             logging.info("- "*50)
-            logging.info("- - - - - Started Data Preprocessing Stage - - - - -")
-            logging.info("- "*50)
+
 
             self.data_ingestion_artifact = data_ingestion_artifact
             self.data_preprocessing_config = data_preprocessing_config
             self.data_validation_artifact = data_validation_artifact
-            self._schema_config = read_yaml_file(file_path=SCHEMA_FILE_PATH)
+            self._schema_config = YamlUtils.read_yaml_file(file_path=SCHEMA_FILE_PATH)
         except Exception as e:
-            raise HotelBookingException(e, sys)
-        
-
-
-    # Add the target feature in dataset
-    @staticmethod
-    def add_target_to_preprocessed_features(preprocessed_features: np.ndarray, target_feature: pd.Series) -> pd.DataFrame:
-        """
-        Method Name: add_target_to_preprocessed_features
-        Description: Converts the preprocessed features into a DataFrame, appends the target feature, 
-                    and returns the complete DataFrame.
-        
-        Input:
-            - preprocessed_features: Numpy array of preprocessed input features.
-            - target_feature: Pandas Series containing target labels.
-            - feature_columns: List of column names corresponding to the input features.
-        
-        Output:
-            - DataFrame with preprocessed input features and target feature appended.
-        """
-        try:
-            logging.info("Converting preprocessed features into a DataFrame")
-            preprocessed_df = pd.DataFrame(preprocessed_features)
-            
-            logging.info("Adding target feature to the preprocessed DataFrame")
-            preprocessed_df[TARGET_COLUMN] = target_feature.values
-            
-            logging.info("Successfully added target feature to the preprocessed DataFrame")
-            return preprocessed_df
-        
-        except Exception as e:
-            raise HotelBookingException(f"Error while adding target to preprocessed features: {str(e)}", sys) from e
-
+            logging.error(f"Error in DataPreprocessing initialization: {str(e)}")
+            raise HotelBookingException(f"Error during DataPreprocessing initialization: {str(e)}", sys) from e
 
 
 
@@ -93,6 +67,7 @@ class DataPreprocessing:
             return df
 
         except Exception as e:
+            logging.error(f"Error in drop_directly_related_features: {str(e)}")
             raise HotelBookingException(f"Error in drop_directly_related_features: {str(e)}",sys) from e
                 
 
@@ -121,8 +96,8 @@ class DataPreprocessing:
             return df
         
         except Exception as e:
-            raise HotelBookingException(f"Error while handling missing values: {str(e)}", sys) from e
-
+            logging.error(f"Error in handle_missing_values: {str(e)}")
+            raise HotelBookingException(f"Error in handle_missing_values: {str(e)}", sys) from e
 
 
     # Function for Handling Noisy Data
@@ -177,13 +152,14 @@ class DataPreprocessing:
             return df
 
         except Exception as e:
+            logging.error(f"Error in handle_noisy_data: {str(e)}")
             raise HotelBookingException(f"Error in handle_noisy_data: {str(e)}", sys) from e
 
 
 
-    # Function for Getting Data Preprocessing object
-    def get_preprocessing_pipeline(self) -> Pipeline:
-        logging.info("Entered get_data_preprocessing_object method of DataPreprocessing class")
+    # Function for Getting Data Preprocessing fucntions and saving preprocessing object (prerprocessing.pkl)
+    def get_preprocessing_functions(self) -> tuple:
+        logging.info("Entered get_data_preprocessing_functions method of DataPreprocessing class")
         try:
             # Fetch schema config
             onehot_encoding_columns = self._schema_config.get('onehot_encoding_columns', [])
@@ -204,7 +180,13 @@ class DataPreprocessing:
 
             def onehot_encoding_function(data: pd.DataFrame) -> pd.DataFrame:
                 data = pd.get_dummies(data, columns=onehot_encoding_columns, drop_first=True)
+                data = data.astype(int)
                 logging.info(f"One-hot encoding applied on columns: {onehot_encoding_columns}")
+                return data
+            
+            def scaling_function(data: pd.DataFrame) -> pd.DataFrame:
+                data[scaling_columns] = scaler.fit_transform(data[scaling_columns])
+                logging.info(f"Scaling applied on columns: {scaling_columns}")
                 return data
 
             # Initialize transformers
@@ -227,40 +209,21 @@ class DataPreprocessing:
             # Create pipeline
             data_pipeline = Pipeline(steps=[('preprocessor', preprocessor)])
             logging.info("Pipeline created successfully.")
-            return data_pipeline
+
+
+            # Save the pipeline
+            ObjectUtils.save_object(self.data_preprocessing_config.preprocessed_object_file_path, data_pipeline)
+            logging.info("Preprocessing object (preprocessing.pkl) saved successfully.")
+
+            return label_encoding_function, onehot_encoding_function, scaling_function
 
         except Exception as e:
             logging.error(f"Error in get_data_preprocessor_object: {str(e)}")
             raise HotelBookingException(f"Error in get_data_preprocessor_object: {str(e)}", sys) from e
+        
 
 
-
-    # Function to export preprocessed data
-    def export_preprocessed_data(self, preprocessed_dataframe: pd.DataFrame, preprocessed_file_path) -> pd.DataFrame:
-        """
-        Saves the preprocessed data into a specified file path.
-        Args:
-            preprocessed_dataframe (DataFrame): Preprocessed DataFrame to be saved.
-        Returns:
-            DataFrame: The preprocessed DataFrame after being saved.
-        """
-        try:
-            logging.info("Exporting preprocessed data to a file.")
-            
-            # Ensure the directory exists
-            dir_path = os.path.dirname(preprocessed_file_path)
-            os.makedirs(dir_path, exist_ok=True)
-
-            logging.info(f"Saving preprocessed data to file path: {preprocessed_file_path}")
-            preprocessed_dataframe.to_csv(preprocessed_file_path, index=False, header=True)
-
-            return preprocessed_dataframe
-        except Exception as e:
-            raise HotelBookingException(f"Error in export_preprocessed_data: {str(e)}", sys) from e
-
-
-
-
+    # Putting all together and initializing the data preprocessing function
     def initiate_data_preprocessing(self, ) -> DataPreprocessingArtifact:
         """
         Method Name :   initiate_data_preprocessing
@@ -272,96 +235,69 @@ class DataPreprocessing:
         try:
             if self.data_validation_artifact.validation_status:
 
-                # Initialize preprocessor object
-                logging.info("Starting data preprocessing")
-                preprocessor = self.get_preprocessing_pipeline()
-                logging.info("Got the preprocessor object")
+                # Initialize preprocessing functions
+                logging.info("Start initializing data preprocessing functions")
+                label_enocder, onehot_enoder, scaler = self.get_preprocessing_functions() 
+                logging.info("Initialized data preprocessing functions")
 
 
-                # Fetching Train and Test datasets
-                logging.info("Start Fetching Train dataset")
-                train_df = read_data(file_path=self.data_ingestion_artifact.trained_file_path)
-                
-                logging.info("Start Fetching Test dataset")
-                test_df = read_data(file_path=self.data_ingestion_artifact.test_file_path)
-                logging.info("Got the Train and Test data")
+                # Fetching dataset
+                logging.info("Start Fetching dataset")
+                df = DataUtils.read_data(file_path=self.data_ingestion_artifact.ingest_file_path)
+                logging.info("Fetched dataset")
 
 
                 # Drop directly related features
-                logging.info("Start Dropping directly related features from Train dataset")
-                train_df = self.drop_directly_related_features(train_df)
+                logging.info("Start Dropping directly related features from dataset")
+                df = self.drop_directly_related_features(df)
+                logging.info("Dropped directly related features from dataset")
 
-                logging.info("Start Dropping directly related features from Test dataset")
-                test_df = self.drop_directly_related_features(test_df)
-                logging.info("Dropped directly related features from Train and Test datasets")
-                
 
                 # Handle missing values in Train and Test datasets
-                logging.info("Start Handling missing values in Training dataset")
-                train_df = self.handle_missing_values(train_df)
-                
-                logging.info("Start Handling missing values in Testing dataset")
-                test_df = self.handle_missing_values(test_df)
-                logging.info("Handled Missing values in Train and Test datasets")
-                
+                logging.info("Start Handling missing values in dataset")
+                df = self.handle_missing_values(df)
+                logging.info("Handled Missing values in dataset")
 
+                
                 # Handle noisy data in Train and Test datasets
-                logging.info("Start Handling noisy data in Train and dataset")
-                train_df = self.handle_noisy_data(train_df)
-
-                logging.info("Start Handling noisy data in Test and dataset")
-                test_df = self.handle_noisy_data(test_df)
-                logging.info("Handled Noisy data in Train and Test datasets")
+                logging.info("Start Handling noisy data in dataset")
+                df = self.handle_noisy_data(df)
+                logging.info("Handled Noisy data in dataset")
+  
                 
-
-                # Seprating Independent Features and Dependent Feature 
-                logging.info("Start Seprating Independent Features and Dependent Feature for Train dataset")
-                train_input_feature, train_target_feature = separate_features_and_target(train_df, target_column=TARGET_COLUMN)
-
-                logging.info("Start Seprating Independent Features and Dependent Feature for Test dataset")
-                test_input_feature, test_target_feature = separate_features_and_target(test_df, target_column=TARGET_COLUMN)
-                logging.info("Independent Features and Dependent Feature are separated from Train and Test datasets")
+                # Appliying Data Preprocessing fucntions on Dataset
+                logging.info("Start Appliying Data Preprocessing fucntions on Dataset")
                 
-
-                # Appliying Preprocessing object on Training and Testing Datasets
-                logging.info("Start Appliying Preprocessing object on Train dataset")
-                train_preprocessed_input_feature = preprocessor.fit_transform(train_input_feature)
-
-                logging.info("Start Appliying Preprocessing object on Test dataset")
-                test_preprocessed_input_feature = preprocessor.fit_transform(test_input_feature)
-                logging.info("Applied Preprocessing object on Train and Test datasets")
+                # label encoding
+                logging.info("\tAppliying label_encoding") 
+                df = label_enocder(df)
+                logging.info("Applied label_encoding") 
                 
+                # onehot encoding
+                logging.info("\tAppliying onehot_encoding") 
+                df = onehot_enoder(df)
+                logging.info("Applied onehot_encoding")  
 
-                # Adding the target column back to the preprocessed DataFrame
-                logging.info("Start Adding target feature to preprocessed Train dataset")
-                train_preprocessed_df = self.add_target_to_preprocessed_features(train_preprocessed_input_feature, 
-                                                                                 train_target_feature)
+                # scaler
+                logging.info("\tAppliying scaler") 
+                df = scaler(df)
+                logging.info("Applied scaler") 
 
-                logging.info("Start Adding target feature to preprocessed Test dataset")
-                test_preprocessed_df = self.add_target_to_preprocessed_features(test_preprocessed_input_feature, 
-                                                                                 test_target_feature)
-                logging.info("Added target feature to preprocessed Train and Test datasets")
-                
+                # Saving preprocessed dataset
+                logging.info("Start Saving preprocessed dataset")
+                DataUtils.save_data(df, self.data_preprocessing_config.preprocessed_data_file_path)
+                logging.info("Saved preprocessed dataset")
 
-                # Saving preprocessor and train, test datasets
-                logging.info("Start Saving preprocessor object and train, test datasets")
-                save_object(self.data_preprocessing_config.preprocessed_object_file_path, preprocessor)
-                self.export_preprocessed_data(train_preprocessed_df, self.data_preprocessing_config.preprocessed_train_file_path)
-                self.export_preprocessed_data(test_preprocessed_df, self.data_preprocessing_config.preprocessed_test_file_path)
-                logging.info("Saved the preprocessor object and train, test datasets")
-
-                logging.info(
-                    "Exited initiate_data_preprocessor method of DataPreprocessor class"
-                )
+                logging.info("Exited initiate_data_preprocessor method of DataPreprocessor class")
 
                 data_preprocessor_artifact = DataPreprocessingArtifact(
                     preprocessed_object_file_path=self.data_preprocessing_config.preprocessed_object_file_path,
-                    preprocessed_train_file_path=self.data_preprocessing_config.preprocessed_train_file_path,
-                    preprocessed_test_file_path=self.data_preprocessing_config.preprocessed_test_file_path
+                    preprocessed_data_file_path=self.data_preprocessing_config.preprocessed_data_file_path
                 )
                 return data_preprocessor_artifact
             else:
                 raise Exception(self.data_validation_artifact.message)
 
         except Exception as e:
-            raise HotelBookingException(e, sys) from e
+            logging.error(f"Error in initialize_data_preprocessing: {str(e)}")
+            raise HotelBookingException(f"Error in initialize_data_preprocessing: {str(e)}", sys) from e

@@ -34,6 +34,7 @@ class DataIngestion:
             # Read the schema configuration for sensitive columns and other details
             self._schema_config = YamlUtils.read_yaml_file(file_path=SCHEMA_FILE_PATH)
         except Exception as e:
+            logging.error(f"Error in DataIngestion initialization: {str(e)}")
             raise HotelBookingException(f"Error during DataIngestion initialization: {str(e)}", sys) from e
 
     def export_data_into_artifact_data(self) -> DataFrame:
@@ -75,7 +76,8 @@ class DataIngestion:
             logging.info("Exited drop_sensitive_columns method of DataIngestion class")
             return dataframe
         except Exception as e:
-            raise HotelBookingException(e, sys) from e
+            logging.error(f"Error in drop_sensitive_columns: {str(e)}")
+            raise HotelBookingException(f"Error in drop_sensitive_columns: {str(e)}", sys) from e
         
 
 
@@ -110,4 +112,5 @@ class DataIngestion:
             logging.info(f"Data ingestion artifact: {data_ingestion_artifact}")
             return data_ingestion_artifact
         except Exception as e:
-            raise HotelBookingException(e, sys) from e
+            logging.error(f"Error in initiate_data_ingestion: {str(e)}")
+            raise HotelBookingException(f"Error in initiate_data_ingestion: {str(e)}", sys) from e

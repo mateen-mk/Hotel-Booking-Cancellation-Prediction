@@ -13,8 +13,8 @@ MYSQL_ENGINE_URL = "MYSQL_ENGINE_URL"
 PIPELINE_NAME: str = "hotelbooking"
 ARTIFACT_DIR: str = "artifact"
 
-TRAIN_FILE_NAME: str = "train.csv"
-TEST_FILE_NAME: str = "test.csv"
+# TRAIN_FILE_NAME: str = "train.csv"
+# TEST_FILE_NAME: str = "test.csv"
 
 # dataset name for saving it in 'artifact/data' after importing it from MySQL
 # FILE_NAME: str = "hotel_booking.csv"
@@ -22,7 +22,6 @@ MODEL_FILE_NAME = "model.pkl"
 
 TARGET_COLUMN = "is_canceled"
 CURRENT_YEAR = date.today().year
-PREPROCESSING_OBJECT_FILE_NAME = "preprocessing.pkl"
 SCHEMA_FILE_PATH = os.path.join("config", "schema.yaml")
 TRAIN_TEST_SPLIT_RATIO: float = 0.2
 
@@ -47,7 +46,10 @@ DATA_VALIDATION_DRIFT_REPORT_FILE_NAME: str = "report.yaml"
 # Data Preprocessing related constants
 DATA_PREPROCESSING_DIR_NAME: str = "data_preprocessing"
 DATA_PREPROCESSING_PREPROCESSED_DATA_DIR: str = "preprocessed"
+DATA_PREPROCESSING_PREPROCESSED_DATA_FILE_NAME: str = "preprocessed.csv"
 DATA_PREPROCESSING_PREPROCESSED_OBJECT_DIR: str = "preprocessed_object"
+DATA_PREPROCESSING_PREPROCESSED_OBJECT_FILE_NAME = "preprocessing.pkl"
+
 
 
 # Model Training related constants

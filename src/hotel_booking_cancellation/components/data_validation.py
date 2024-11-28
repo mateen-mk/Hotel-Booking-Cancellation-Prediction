@@ -1,7 +1,6 @@
 import json
 import sys
 
-import pandas as pd
 from evidently.model_profile import Profile
 from evidently.model_profile.sections import DataDriftProfileSection
 
@@ -32,7 +31,8 @@ class DataValidation:
             self.data_validation_config = data_validation_config
             self._schema_config = YamlUtils.read_yaml_file(file_path=SCHEMA_FILE_PATH)
         except Exception as e:
-            raise HotelBookingException(e,sys)
+            logging.error(f"Error in DataValidation initialization: {str(e)}")
+            raise HotelBookingException(f"Error during DataValidation initialization: {str(e)}", sys) from e
 
 
     def validate_number_of_columns(self, dataframe: DataFrame) -> bool:
@@ -67,7 +67,9 @@ class DataValidation:
             
             return status
         except Exception as e:
-            raise HotelBookingException(e, sys)
+            logging.error(f"Error in validate_number_of_columns: {str(e)}")
+            raise HotelBookingException(f"Error in validate_number_of_columns: {str(e)}", sys) from e
+
 
     def is_column_exist(self, df: DataFrame) -> bool:
         """
@@ -98,8 +100,8 @@ class DataValidation:
 
             return False if len(missing_categorical_columns)>0 or len(missing_numerical_columns)>0 else True
         except Exception as e:
-            raise HotelBookingException(e, sys) from e
-        
+            logging.error(f"Error in is_column_exist: {str(e)}")
+            raise HotelBookingException(f"Error in is_column_exist: {str(e)}", sys) from e        
 
 
     def detect_dataset_drift(self, reference_df: DataFrame, current_df: DataFrame, ) -> bool:
@@ -127,7 +129,9 @@ class DataValidation:
             drift_status = json_report["data_drift"]["data"]["metrics"]["dataset_drift"]
             return drift_status
         except Exception as e:
-            raise HotelBookingException(e, sys) from e
+            logging.error(f"Error in detect_data_drift: {str(e)}")
+            raise HotelBookingException(f"Error in detect_data_drift: {str(e)}", sys) from e
+
 
     def initiate_data_validation(self) -> DataValidationArtifact:
         """
@@ -186,4 +190,5 @@ class DataValidation:
             return data_validation_artifact
 
         except Exception as e:
-            raise HotelBookingException(e, sys) from e
+            logging.error(f"Error in initiate_data_validation: {str(e)}")
+            raise HotelBookingException(f"Error in initiate_data_validation: {str(e)}", sys) from e

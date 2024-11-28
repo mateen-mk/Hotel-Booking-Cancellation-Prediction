@@ -22,8 +22,8 @@ class DataValidationArtifact:
 @dataclass
 class DataPreprocessingArtifact:
     preprocessed_object_file_path:str    # file path to preprocessing.pkl
-    preprocessed_train_file_path:str     # file path to trained data in numpy array format (train.npy)
-    preprocessed_test_file_path:str      # file path to test data in numpy array format (test.npy)
+    preprocessed_data_file_path:str     # file path to preprocessed data
+    # preprocessed_test_file_path:str      # file path to test data in numpy array format (test.npy)
 
 
 # Classification Matrix Artifact

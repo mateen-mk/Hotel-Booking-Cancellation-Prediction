@@ -42,13 +42,12 @@ class DataValidationConfig:
 @dataclass
 class DataPreprocessingConfig:
     data_preprocessing_dir: str = os.path.join(training_pipeline_config.artifact_dir, DATA_PREPROCESSING_DIR_NAME)
-    preprocessed_train_file_path: str = os.path.join(data_preprocessing_dir, DATA_PREPROCESSING_PREPROCESSED_DATA_DIR,
-                                                    TRAIN_FILE_NAME)
-    preprocessed_test_file_path: str = os.path.join(data_preprocessing_dir, DATA_PREPROCESSING_PREPROCESSED_DATA_DIR,
-                                                   TEST_FILE_NAME)
+    preprocessed_data_file_path: str = os.path.join(data_preprocessing_dir, 
+                                                     DATA_PREPROCESSING_PREPROCESSED_DATA_DIR, 
+                                                     DATA_PREPROCESSING_PREPROCESSED_DATA_FILE_NAME)
     preprocessed_object_file_path: str = os.path.join(data_preprocessing_dir,
                                                      DATA_PREPROCESSING_PREPROCESSED_OBJECT_DIR,
-                                                     PREPROCESSING_OBJECT_FILE_NAME)
+                                                     DATA_PREPROCESSING_PREPROCESSED_OBJECT_FILE_NAME)
     
 
 

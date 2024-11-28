@@ -26,6 +26,8 @@
     2. Data validation:
         - validate whole data: instead of train and test differntly
     3. Data Preprocessing:
+    - functions
+        - read data from artifact/data_ingestion/ingested/ingested.csv
         - remove directly related features
         - handle missing values
         - handle noisy data
