@@ -7,12 +7,17 @@ from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 from sklearn.compose import ColumnTransformer
 
 from src.hotel_booking_cancellation.logger import logging
-from src.hotel_booking_cancellation.entity.config_entity import DataPreprocessingConfig
-from src.hotel_booking_cancellation.entity.artifact_entity import DataPreprocessingArtifact, DataIngestionArtifact, DataValidationArtifact
 from src.hotel_booking_cancellation.exception import HotelBookingException
 
-from src.hotel_booking_cancellation.utils.main_utils import DataUtils, ObjectUtils, YamlUtils
+from src.hotel_booking_cancellation.entity.config_entity import DataPreprocessingConfig
+from src.hotel_booking_cancellation.entity.artifact_entity import (DataPreprocessingArtifact,
+                                                                   DataIngestionArtifact,
+                                                                   DataValidationArtifact)
+
 from src.hotel_booking_cancellation.constants import SCHEMA_FILE_PATH
+from src.hotel_booking_cancellation.utils.main_utils import (DataUtils, 
+                                                             ObjectUtils, 
+                                                             YamlUtils)
 
 
 
@@ -41,6 +46,7 @@ class DataPreprocessing:
             self.data_preprocessing_config = data_preprocessing_config
             self.data_validation_artifact = data_validation_artifact
             self._schema_config = YamlUtils.read_yaml_file(file_path=SCHEMA_FILE_PATH)
+     
         except Exception as e:
             logging.error(f"Error in DataPreprocessing initialization: {str(e)}")
             raise HotelBookingException(f"Error during DataPreprocessing initialization: {str(e)}", sys) from e
@@ -64,6 +70,7 @@ class DataPreprocessing:
             # Dropping the columns
             df = df.drop(columns=drop_columns, errors='ignore')
             logging.info(f"Successfully dropped directly related columns: {drop_columns}")
+ 
             return df
 
         except Exception as e:
@@ -98,6 +105,7 @@ class DataPreprocessing:
         except Exception as e:
             logging.error(f"Error in handle_missing_values: {str(e)}")
             raise HotelBookingException(f"Error in handle_missing_values: {str(e)}", sys) from e
+
 
 
     # Function for Handling Noisy Data
@@ -138,17 +146,18 @@ class DataPreprocessing:
 
             if 'adults' in noisy_columns and noisy_data_count.get('adults', 0) > 0:
                 df = df[df['adults'] > 0]
-                logging.info(f"     Removed rows where adults == 0")
+                logging.info("     Removed rows where adults == 0")
 
             if 'children' in noisy_columns and noisy_data_count.get('children', 0) > 0:
                 df = df[df['children'] != 10]
-                logging.info(f"     Removed rows where children == 10")
+                logging.info("     Removed rows where children == 10")
 
             if 'babies' in noisy_columns and noisy_data_count.get('babies', 0) > 0:
                 df = df[df['babies'] != 10]
-                logging.info(f"     Removed rows where babies == 10")
+                logging.info("     Removed rows where babies == 10")
             
             logging.info("Noisy data handling completed successfully")
+  
             return df
 
         except Exception as e:
@@ -294,7 +303,9 @@ class DataPreprocessing:
                     preprocessed_object_file_path=self.data_preprocessing_config.preprocessed_object_file_path,
                     preprocessed_data_file_path=self.data_preprocessing_config.preprocessed_data_file_path
                 )
+
                 return data_preprocessor_artifact
+
             else:
                 raise Exception(self.data_validation_artifact.message)
 

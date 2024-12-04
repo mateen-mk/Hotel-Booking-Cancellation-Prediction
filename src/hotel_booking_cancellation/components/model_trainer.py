@@ -2,17 +2,30 @@ import sys
 
 import importlib
 import pandas as pd
+
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import (accuracy_score, 
+                             f1_score, 
+                             precision_score, 
+                             recall_score, 
+                             roc_auc_score)
 
 from src.hotel_booking_cancellation.logger import logging
-from src.hotel_booking_cancellation.entity.config_entity import ModelTrainerConfig
-from src.hotel_booking_cancellation.entity.artifact_entity import DataPreprocessingArtifact, ModelTrainerArtifact, ClassificationMetrixArtifact
-from src.hotel_booking_cancellation.entity.estimator import HotelBookingModel
 from src.hotel_booking_cancellation.exception import HotelBookingException
 
-from src.hotel_booking_cancellation.utils.main_utils import DataUtils, TrainTestSplitUtils, YamlUtils, ObjectUtils
-from src.hotel_booking_cancellation.constants import TARGET_COLUMN, TRAIN_TEST_SPLIT_RATIO
+from src.hotel_booking_cancellation.entity.estimator import HotelBookingModel
+from src.hotel_booking_cancellation.entity.config_entity import ModelTrainerConfig
+from src.hotel_booking_cancellation.entity.artifact_entity import (DataPreprocessingArtifact, 
+                                                                   ModelTrainerArtifact, 
+                                                                   ClassificationMetrixArtifact)
+
+from src.hotel_booking_cancellation.utils.main_utils import (DataUtils, 
+                                                             TrainTestSplitUtils, 
+                                                             YamlUtils, 
+                                                             ObjectUtils)
+from src.hotel_booking_cancellation.constants import (TARGET_COLUMN, 
+                                                      TRAIN_TEST_SPLIT_RATIO)
+
 
 
 
@@ -50,6 +63,7 @@ class ModelTrainer:
         try:
             logging.info(f"Calculating performance metrics for model: {model_name}")
             y_pred = clf.predict(X_test)
+
             result = pd.DataFrame(data=[accuracy_score(y_test, y_pred),
                                          precision_score(y_test, y_pred, pos_label=1),
                                          recall_score(y_test, y_pred, pos_label=1),
@@ -57,12 +71,16 @@ class ModelTrainer:
                                          roc_auc_score(y_test, clf.predict_proba(X_test)[:, 1])],
                                    index=['Accuracy', 'Precision (Class 1)', 'Recall (Class 1)', 'F1-score (Class 1)', 'AUC (Class 1)'],
                                    columns=[model_name])
-            result = (result * 100).round(2).astype(str) + '%'
 
+
+            result = (result * 100).round(2).astype(str) + '%'
             logging.info(f"Metrics for {model_name}: {result.to_dict()}")
+
             return result
+
         except Exception as e:
             raise HotelBookingException(e, sys) from e
+
 
 
     def tune_hyperparameters(self, X_train: pd.DataFrame, y_train: pd.Series) -> dict:
@@ -118,6 +136,7 @@ class ModelTrainer:
             logging.info("Hyperparameter tuning completed successfully")
 
             return best_models
+
         except Exception as e:
             raise HotelBookingException(e, sys) from e
 
@@ -187,5 +206,6 @@ class ModelTrainer:
             logging.info(f"Model trainer artifact created: {model_trainer_artifact}")
 
             return model_trainer_artifact
+
         except Exception as e:
             raise HotelBookingException(e, sys) from e

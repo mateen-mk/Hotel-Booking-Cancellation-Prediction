@@ -3,14 +3,17 @@ import sys
 from pandas import DataFrame
 
 from src.hotel_booking_cancellation.logger import logging
+from src.hotel_booking_cancellation.exception import HotelBookingException
+
+from src.hotel_booking_cancellation.data_access.hotel_booking_data import HotelBookingData
 from src.hotel_booking_cancellation.entity.config_entity import DataIngestionConfig
 from src.hotel_booking_cancellation.entity.artifact_entity import DataIngestionArtifact
-from src.hotel_booking_cancellation.data_access.hotel_booking_data import HotelBookingData
-from src.hotel_booking_cancellation.exception import HotelBookingException
 
 from src.hotel_booking_cancellation.utils.main_utils import YamlUtils
 from src.hotel_booking_cancellation.constants import DATASET_NAME
 from src.hotel_booking_cancellation.constants import SCHEMA_FILE_PATH
+
+
 
 
 class DataIngestion:
@@ -33,9 +36,12 @@ class DataIngestion:
             self.data_ingestion_config = data_ingestion_config
             # Read the schema configuration for sensitive columns and other details
             self._schema_config = YamlUtils.read_yaml_file(file_path=SCHEMA_FILE_PATH)
+     
         except Exception as e:
             logging.error(f"Error in DataIngestion initialization: {str(e)}")
             raise HotelBookingException(f"Error during DataIngestion initialization: {str(e)}", sys) from e
+
+
 
     def export_data_into_artifact_data(self) -> DataFrame:
         try:
@@ -44,15 +50,19 @@ class DataIngestion:
             dataframe = hotel_booking_data.export_data_as_dataframe(dataset_name=self.dataset_name)
             logging.info(f"Shape of dataframe: {dataframe.shape}")
 
+
             artifact_data_file_path = self.data_ingestion_config.data_file_path
             dir_path = os.path.dirname(artifact_data_file_path)
             os.makedirs(dir_path, exist_ok=True)
 
+
             logging.info(f"Saving exported data into feature store file path: {artifact_data_file_path}")
             dataframe.to_csv(artifact_data_file_path, index=False, header=True)
+        
             return dataframe
         except Exception as e:
-            raise HotelBookingException(f"Error in export_data_into_feature_store: {str(e)}", sys) from e
+            logging.error(f"Error in export_data_into_artifact_data: {str(e)}")
+            raise HotelBookingException(f"Error in export_data_into_artifact_data: {str(e)}",sys) from e
 
 
 
@@ -69,12 +79,15 @@ class DataIngestion:
         try:
             # Retrieve sensitive columns from schema config
             sensitive_columns = self._schema_config.get("sensitive_columns", [])
+
             if sensitive_columns:
                 logging.info(f"Removing sensitive columns: {sensitive_columns}")
                 dataframe = dataframe.drop(columns=sensitive_columns, errors="ignore")
 
+
             logging.info("Exited drop_sensitive_columns method of DataIngestion class")
             return dataframe
+        
         except Exception as e:
             logging.error(f"Error in drop_sensitive_columns: {str(e)}")
             raise HotelBookingException(f"Error in drop_sensitive_columns: {str(e)}", sys) from e
@@ -95,22 +108,27 @@ class DataIngestion:
             dataframe = self.export_data_into_artifact_data()
             logging.info("Got the data from MySQL Database")
 
+
             dataframe = self.drop_sensitive_columns(dataframe)
             logging.info("Dropped sensitive columns from the dataframe")
+
 
             ingested_data_file_path = self.data_ingestion_config.ingested_file_path
             dir_path = os.path.dirname(ingested_data_file_path)
             os.makedirs(dir_path, exist_ok=True)
 
+
             logging.info(f"Saving ingested data into file path: {ingested_data_file_path}")
             dataframe.to_csv(ingested_data_file_path, index=False, header=True)
 
+            
             logging.info("Exited initiate_data_ingestion method of DataIngestionClass")
-
+  
             data_ingestion_artifact = DataIngestionArtifact(ingest_file_path=ingested_data_file_path)
-
             logging.info(f"Data ingestion artifact: {data_ingestion_artifact}")
+        
             return data_ingestion_artifact
+        
         except Exception as e:
             logging.error(f"Error in initiate_data_ingestion: {str(e)}")
             raise HotelBookingException(f"Error in initiate_data_ingestion: {str(e)}", sys) from e
