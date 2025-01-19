@@ -9,7 +9,8 @@ from src.hotel_booking_cancellation.data_access.hotel_booking_data import HotelB
 from src.hotel_booking_cancellation.entity.config_entity import DataIngestionConfig
 from src.hotel_booking_cancellation.entity.artifact_entity import DataIngestionArtifact
 
-from src.hotel_booking_cancellation.utils.main_utils import YamlUtils
+from src.hotel_booking_cancellation.utils.main_utils import (YamlUtils, 
+                                                             DataUtils)
 from src.hotel_booking_cancellation.constants import DATASET_NAME
 from src.hotel_booking_cancellation.constants import SCHEMA_FILE_PATH
 
@@ -28,8 +29,7 @@ class DataIngestion:
         """
         try:
             logging.info("_"*100)
-            logging.info("")
-            logging.info("| | Started Data Ingestion Stage:")
+            logging.info("\n| | Started Data Ingestion Stage:")
             logging.info("- "*50)
 
             self.dataset_name = DATASET_NAME
@@ -51,13 +51,13 @@ class DataIngestion:
             logging.info(f"Shape of dataframe: {dataframe.shape}")
 
 
-            artifact_data_file_path = self.data_ingestion_config.data_file_path
-            dir_path = os.path.dirname(artifact_data_file_path)
+            artifact_raw_file_path = self.data_ingestion_config.raw_file_path
+            dir_path = os.path.dirname(artifact_raw_file_path)
             os.makedirs(dir_path, exist_ok=True)
 
 
-            logging.info(f"Saving exported data into feature store file path: {artifact_data_file_path}")
-            dataframe.to_csv(artifact_data_file_path, index=False, header=True)
+            logging.info(f"Saving exported data into artifact raw file path: {artifact_raw_file_path}")
+            DataUtils.save_data(dataframe, artifact_raw_file_path)
         
             return dataframe
         except Exception as e:
@@ -113,18 +113,18 @@ class DataIngestion:
             logging.info("Dropped sensitive columns from the dataframe")
 
 
-            ingested_data_file_path = self.data_ingestion_config.ingested_file_path
-            dir_path = os.path.dirname(ingested_data_file_path)
+            data_file_path = self.data_ingestion_config.data_file_path
+            dir_path = os.path.dirname(data_file_path)
             os.makedirs(dir_path, exist_ok=True)
 
 
-            logging.info(f"Saving ingested data into file path: {ingested_data_file_path}")
-            dataframe.to_csv(ingested_data_file_path, index=False, header=True)
+            logging.info(f"Saving ingested data into file path: {data_file_path}")
+            DataUtils.save_data(dataframe, data_file_path)
 
             
             logging.info("Exited initiate_data_ingestion method of DataIngestionClass")
   
-            data_ingestion_artifact = DataIngestionArtifact(ingest_file_path=ingested_data_file_path)
+            data_ingestion_artifact = DataIngestionArtifact(data_file_path=data_file_path)
             logging.info(f"Data ingestion artifact: {data_ingestion_artifact}")
         
             return data_ingestion_artifact
