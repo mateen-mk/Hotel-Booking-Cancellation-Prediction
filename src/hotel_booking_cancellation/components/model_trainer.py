@@ -42,8 +42,7 @@ class ModelTrainer:
         """
         try:
             logging.info("_"*100)
-            logging.info("")
-            logging.info("| | Started Model Trainer Stage:")
+            logging.info("\n| | Started Model Trainer Stage:")
             logging.info("- "*50)
 
             self.data_preprocessing_artifact = data_preprocessing_artifact
@@ -145,16 +144,26 @@ class ModelTrainer:
     def initiate_model_trainer(self) -> ModelTrainerArtifact:
         logging.info("Starting model training process...")
         try:
-            # Load data
-            data = DataUtils.read_data(self.data_preprocessing_artifact.preprocessed_data_file_path)
-            logging.info(f"Loaded preprocessed data from: {self.data_preprocessing_artifact.preprocessed_data_file_path}")
-            logging.info(f"Data shape: {data.shape}")
+            # Load training data
+            train_df = DataUtils.read_data(self.data_preprocessing_artifact.train_data_file_path)
+            logging.info(f"Loaded preprocessed training data from: {self.data_preprocessing_artifact.train_data_file_path}")
+            logging.info(f"Training Data shape: {train_df.shape}")
+
+            # Separate training data into X and y
+            X_train, y_train = TrainTestSplitUtils.separate_features_and_target(train_df, TARGET_COLUMN)
+            logging.info("Seperate Training data into X and y completed successfully")
+            logging.info(f"X_train set size: {X_train.shape}, y_train set size: {y_train.shape}")
 
 
-            # Perform train-test split
-            X_train, X_test, y_train, y_test = TrainTestSplitUtils.train_test_split_for_model_building(data, TRAIN_TEST_SPLIT_RATIO, TARGET_COLUMN)
-            logging.info("Train-test split completed successfully")
-            logging.info(f"Training set size: {X_train.shape}, Test set size: {X_test.shape}")
+            # Load validation data
+            val_df = DataUtils.read_data(self.data_preprocessing_artifact.validation_data_file_path)
+            logging.info(f"Loaded preprocessed validation data from: {self.data_preprocessing_artifact.validation_data_file_path}")
+            logging.info(f"Validation Data shape: {val_df.shape}")
+
+            # Separate Validaton data into X and y
+            X_val, y_val = TrainTestSplitUtils.separate_features_and_target(val_df, TARGET_COLUMN)
+            logging.info("Seperate Validaton data into X and y completed successfully")
+            logging.info(f"X_val set size: {X_val.shape}, y_val set size: {y_val.shape}")
 
 
             # Tune hyperparameters and get best models
@@ -171,7 +180,7 @@ class ModelTrainer:
             for model_name, model in best_models.items():
                 logging.info(f"Evaluating model: {model_name}")
 
-                result = self.metrics_calculator(model, X_test, y_test, model_name)
+                result = self.metrics_calculator(model, X_val, y_val, model_name)
                 recall = float(result.loc['Recall (Class 1)'].values[0].replace('%', ''))
 
 
@@ -199,9 +208,15 @@ class ModelTrainer:
             logging.info("Best model saved successfully")
 
 
+            # Save the best metrics
+            metric_result = vars(metric_artifact)
+            YamlUtils.write_yaml_file(self.model_trainer_config.metric_article_file_path, metric_result)
+            logging.info("Best metrics saved successfully")
+
+
             model_trainer_artifact = ModelTrainerArtifact(
                 trained_model_file_path=self.model_trainer_config.trained_model_file_path,
-                metric_artifact=metric_artifact
+                metric_artifact=self.model_trainer_config.metric_article_file_path
             )
             logging.info(f"Model trainer artifact created: {model_trainer_artifact}")
 
