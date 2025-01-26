@@ -118,6 +118,43 @@ class TrainTestSplitUtils:
     Description :  This class contains methods to perform train-test split operations.
     """
 
+    # split data into three datasets train, test and validation datasets
+    @staticmethod
+    def split_data(dataframe: pd.DataFrame) -> tuple:
+        """
+        Method Name: split_data
+        Description :   Splits the given DataFrame into three datasets: train, test, and validation.
+        
+        Input       :   dataframe      -> The input DataFrame (train/test).
+        
+        Output      :   tuple         -> A tuple containing the training DataFrame, the testing DataFrame, and the validation DataFrame.
+        """ 
+        try:
+            # Splitting and saving the preprocessed dataset
+            logging.info("Start splitting the preprocessed dataset")
+
+            # Split into train and remaining (test + validation)
+            train_data, temp_data = train_test_split(
+                dataframe, 
+                test_size=0.30,  # 30% for test + validation
+                random_state=42, 
+                shuffle=True
+            )
+
+            # Split remaining into test and validation
+            test_data, validation_data = train_test_split(
+                temp_data, 
+                test_size=0.50,  # Split 30% into 50% test and 50% validation
+                random_state=42, 
+                shuffle=True
+            )
+
+            return train_data, test_data, validation_data
+        
+        except Exception as e:
+            raise HotelBookingException(f"Error in split_data: {str(e)}", sys) from e
+
+
     # Funcion for Separating Target feature from Dataset
     @staticmethod
     def separate_features_and_target(dataframe: pd.DataFrame, target_column: str) -> tuple:
@@ -185,7 +222,6 @@ class TrainTestSplitUtils:
             return X_train, X_test, y_train, y_test 
         except Exception as e:
             raise HotelBookingException(e, sys) from e
-
 
 
     @staticmethod
