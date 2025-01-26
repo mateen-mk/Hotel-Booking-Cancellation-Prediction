@@ -30,8 +30,7 @@ class DataValidation:
         """
         try:
             logging.info("_"*100)
-            logging.info("")
-            logging.info("| | Started Data Validation Stage:")
+            logging.info("\n| | Started Data Validation Stage:")
             logging.info("- "*50)
 
             self.data_ingestion_artifact = data_ingestion_artifact
@@ -175,7 +174,7 @@ class DataValidation:
 
 
             # Reading dataset
-            df = DataUtils.read_data(file_path=self.data_ingestion_artifact.ingest_file_path)
+            df = DataUtils.read_data(file_path=self.data_ingestion_artifact.data_file_path)
             logging.info("Training and testing datasets loaded successfully.")
 
 
