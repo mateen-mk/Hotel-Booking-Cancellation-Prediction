@@ -15,9 +15,11 @@ from src.hotel_booking_cancellation.entity.artifact_entity import (DataPreproces
                                                                    DataValidationArtifact)
 
 from src.hotel_booking_cancellation.constants import SCHEMA_FILE_PATH
+from src.hotel_booking_cancellation.constants import MONTH_ORDER
 from src.hotel_booking_cancellation.utils.main_utils import (DataUtils, 
                                                              ObjectUtils, 
-                                                             YamlUtils)
+                                                             YamlUtils,
+                                                             TrainTestSplitUtils)
 
 
 
@@ -37,8 +39,7 @@ class DataPreprocessing:
         try:
 
             logging.info("_"*100)
-            logging.info("")
-            logging.info("| | Started Data Preprocessing Stage:")
+            logging.info("\n| | Started Data Preprocessing Stage:")
             logging.info("- "*50)
 
 
@@ -167,7 +168,7 @@ class DataPreprocessing:
 
 
     # Function for Getting Data Preprocessing fucntions and saving preprocessing object (prerprocessing.pkl)
-    def get_preprocessing_functions(self) -> tuple:
+    def get_preprocessing_functions(self) -> Pipeline: #tuple:
         logging.info("Entered get_data_preprocessing_functions method of DataPreprocessing class")
         try:
             # Fetch schema config
@@ -178,9 +179,7 @@ class DataPreprocessing:
 
             # Define individual transformer functions
             def label_encoding_function(data: pd.DataFrame) -> pd.DataFrame:
-                month_order = ['January', 'February', 'March', 'April', 
-                            'May', 'June', 'July', 'August', 
-                            'September', 'October', 'November', 'December']
+                month_order = MONTH_ORDER
                 columns = label_encoding_columns if isinstance(label_encoding_columns, list) else [label_encoding_columns]
                 for col in columns:
                     data[col] = data[col].apply(lambda x: month_order.index(x) + 1)
@@ -224,7 +223,8 @@ class DataPreprocessing:
             ObjectUtils.save_object(self.data_preprocessing_config.preprocessed_object_file_path, data_pipeline)
             logging.info("Preprocessing object (preprocessing.pkl) saved successfully.")
 
-            return label_encoding_function, onehot_encoding_function, scaling_function
+            return data_pipeline
+            # return label_encoding_function, onehot_encoding_function, scaling_function
 
         except Exception as e:
             logging.error(f"Error in get_data_preprocessor_object: {str(e)}")
@@ -233,7 +233,7 @@ class DataPreprocessing:
 
 
     # Putting all together and initializing the data preprocessing function
-    def initiate_data_preprocessing(self, ) -> DataPreprocessingArtifact:
+    def initiate_data_preprocessing(self) -> DataPreprocessingArtifact:
         """
         Method Name :   initiate_data_preprocessing
         Description :   This method initiates the data preprocessing component for the pipeline 
@@ -246,13 +246,14 @@ class DataPreprocessing:
 
                 # Initialize preprocessing functions
                 logging.info("Start initializing data preprocessing functions")
-                label_enocder, onehot_enoder, scaler = self.get_preprocessing_functions() 
+                preprocessor = self.get_preprocessing_functions()
+                # label_enocder, onehot_enoder, scaler = self.get_preprocessing_functions() 
                 logging.info("Initialized data preprocessing functions")
 
 
                 # Fetching dataset
                 logging.info("Start Fetching dataset")
-                df = DataUtils.read_data(file_path=self.data_ingestion_artifact.ingest_file_path)
+                df = DataUtils.read_data(file_path=self.data_ingestion_artifact.data_file_path)
                 logging.info("Fetched dataset")
 
 
@@ -292,16 +293,41 @@ class DataPreprocessing:
                 df = scaler(df)
                 logging.info("Applied scaler") 
 
-                # Saving preprocessed dataset
-                logging.info("Start Saving preprocessed dataset")
-                DataUtils.save_data(df, self.data_preprocessing_config.preprocessed_data_file_path)
-                logging.info("Saved preprocessed dataset")
+
+                # Splitting dataset into train, test, validation datasets
+                logging.info("Start Splitting dataset into train, test, validation datasets")
+                train_df, test_df, validation_df = TrainTestSplitUtils.split_data(df)
+                logging.info("Splitted dataset into train, test, validation datasets")
+                
+                # Logging the dataset sizes
+                logging.info(f"\tTrain data size: {len(train_df)}")
+                logging.info(f"\tTest data size: {len(test_df)}")
+                logging.info(f"\tValidation data size: {len(validation_df)}")
+
+
+                # Saving preprocessed train dataset
+                logging.info("Start Saving preprocessed train dataset")
+                DataUtils.save_data(train_df, self.data_preprocessing_config.train_data_file_path)
+                logging.info("Saved preprocessed train dataset")
+
+                # Saving preprocessed test dataset
+                logging.info("Start Saving preprocessed test dataset")
+                DataUtils.save_data(test_df, self.data_preprocessing_config.test_data_file_path)
+                logging.info("Saved preprocessed test dataset")
+
+                # Saving preprocessed validation dataset
+                logging.info("Start Saving preprocessed validation dataset")
+                DataUtils.save_data(validation_df, self.data_preprocessing_config.validation_data_file_path)
+                logging.info("Saved preprocessed validation dataset")
+
 
                 logging.info("Exited initiate_data_preprocessor method of DataPreprocessor class")
 
                 data_preprocessor_artifact = DataPreprocessingArtifact(
                     preprocessed_object_file_path=self.data_preprocessing_config.preprocessed_object_file_path,
-                    preprocessed_data_file_path=self.data_preprocessing_config.preprocessed_data_file_path
+                    train_data_file_path=self.data_preprocessing_config.train_data_file_path,
+                    test_data_file_path=self.data_preprocessing_config.test_data_file_path,
+                    validation_data_file_path=self.data_preprocessing_config.validation_data_file_path
                 )
 
                 return data_preprocessor_artifact
